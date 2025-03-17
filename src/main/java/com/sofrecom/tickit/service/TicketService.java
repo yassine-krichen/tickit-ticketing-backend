@@ -88,4 +88,12 @@ public interface TicketService {
      *         - resolved: Change in RESOLVED tickets
      */
     Map<String, Double> getMonthOverMonthComparisons();
+
+    List<Ticket> findSimilarResolvedTickets(String subject, CaseType type, int limit);
+
+    Map<String, Object> getTicketTrends(int days);
+
+    Map<String, Double> getResolutionMetrics();
+
+    int autoDeleteOldClosedTickets();
 }
