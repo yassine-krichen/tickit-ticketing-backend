@@ -1,0 +1,13 @@
+package com.sofrecom.tickit.model.enumList;
+
+public enum TypePhase {
+    AFFECTATION_ET_MISE_EN_CAUSE,
+    CREANCE,
+    RAPPEL_SIMPLE,
+    RAPPEL_ASSURANCE,
+    MISE_EN_DEMEURE,
+    MISE_CONTENTIEUX,
+    CLOTURE_DOSSIER,
+    DEMANDE_INFORMATION,
+    CONTESTATION_OU_RECLAMATION
+}
