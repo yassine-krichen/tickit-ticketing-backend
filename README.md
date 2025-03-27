@@ -20,7 +20,6 @@
 - [Interface Utilisateur](#interface-utilisateur)
 - [Installation](#installation)
 - [Structure du Projet](#structure-du-projet)
-- [Documentation](#documentation)
 - [Contribution](#contribution)
 - [Licence](#licence)
 - [Contact](#contact)
@@ -121,12 +120,6 @@ TickIT apporte une solution innovante pour la gestion des blocages dans le trait
 
 ## 🚀 Installation
 
-### Prérequis
-- Java 1.8 
-- PostgreSQL 11.9
-- Maven 3.9.2 ou supérieurs
-
-### Configuration
 1. Cloner le repository
 ```bash
 git clone git@example.com:tickit.git
@@ -195,7 +188,7 @@ Pour toute question ou support :
 ---
 
 <div align="center">
-  <p>Développé avec passion par l'équipe Sofrecom</p>
+  <p>Développé avec passion par l'équipe stagiaire Sofrecom</p>
   <p>© 2025 Sofrecom. Tous droits réservés.</p>
 </div>
 
