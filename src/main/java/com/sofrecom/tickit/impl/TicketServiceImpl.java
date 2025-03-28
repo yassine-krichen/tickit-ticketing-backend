@@ -1103,9 +1103,66 @@ public class TicketServiceImpl implements TicketService {
         return formattedPercentage;
     }
 
-    // Add this method to format percentages to 1 decimal place
     private Double formatPercentage(double percentage) {
-        // Round to 1 decimal place
         return Math.round(percentage * 10.0) / 10.0;
+    }
+
+    @Override
+    public List<Ticket> findSimilarResolvedTickets(String subject, CaseType type, int limit) {
+        String[] keywords = subject.split("\\s+");
+        String primaryKeyword = keywords.length > 0 ? keywords[0] : subject;
+        Page<Ticket> ticketPage = ticketRepository.findSimilarResolvedTickets(
+            primaryKeyword, Ticket.Status.RESOLVED, type, PageRequest.of(0, limit));
+        return ticketPage.getContent();
+    }
+
+    @Override
+    public Map<String, Object> getTicketTrends(int days) {
+        LocalDateTime startDate = LocalDateTime.now().minusDays(days);
+        List<Object[]> trendData = ticketRepository.getTicketTrends(startDate);
+
+        Map<String, Object> trends = new HashMap<>();
+        long totalTickets = trendData.stream()
+            .mapToLong(row -> {
+                Object count = row[1];
+                if (count instanceof java.math.BigInteger) return ((java.math.BigInteger) count).longValue();
+                if (count instanceof Long) return (Long) count;
+                if (count instanceof Integer) return ((Integer) count).longValue();
+                return 0L;
+            })
+            .sum();
+
+        trends.put("totalTickets", totalTickets);
+        trends.put("dailyData", trendData);
+        return trends;
+    }
+
+    @Override
+    public Map<String, Double> getResolutionMetrics() {
+        Object[] metrics = ticketRepository.getResolutionMetrics(Ticket.Status.RESOLVED.name());
+        Map<String, Double> result = new HashMap<>();
+        if (metrics != null && metrics.length >= 3) {
+            result.put("averageResolutionHours", metrics[0] != null ? ((Number) metrics[0]).doubleValue() : 0.0);
+            result.put("fastestResolutionHours", metrics[1] != null ? ((Number) metrics[1]).doubleValue() : 0.0);
+            result.put("slowestResolutionHours", metrics[2] != null ? ((Number) metrics[2]).doubleValue() : 0.0);
+        } else {
+            result.put("averageResolutionHours", 0.0);
+            result.put("fastestResolutionHours", 0.0);
+            result.put("slowestResolutionHours", 0.0);
+        }
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public int autoDeleteOldClosedTickets() {
+        log.info("Starting automatic deletion of old closed tickets.");
+        LocalDateTime ninetyDaysAgo = LocalDateTime.now().minusDays(90);
+        int deletedCount = ticketRepository.deleteTicketsByStatusAndUpdatedAtBefore(
+            Ticket.Status.CLOSED, ninetyDaysAgo);
+        if (deletedCount > 0) {
+            log.info("Deleted {} old closed tickets.", deletedCount);
+        }
+        return deletedCount;
     }
 }
