@@ -14,11 +14,15 @@
 	<name>TickIT Ticketing System</name>
 	<description>A ticketing system designed for integration with BoTool, the Sofrecom case management application.</description>
 	<url/>
-	<licenses>
-		<license/>
-	</licenses>
 	<developers>
-		<developer/>
+		<developer>
+			<name>Yassine Krichen</name>
+			<email>yassine.krichen@sofrecom.com</email>
+		</developer>
+		<developer>
+			<name>Talel Turki</name>
+			<email>talel@example.com</email>
+		</developer>
 	</developers>
 	<scm>
 		<connection/>
@@ -27,8 +31,9 @@
 		<url/>
 	</scm>
 	<properties>
-		<java.version>1.8</java.version>
-	</properties>
+        <java.version>1.8</java.version>
+        <maven-resources-plugin.version>3.3.0</maven-resources-plugin.version>
+    </properties>
 	<dependencies>
 		<!-- JPA for PostgreSQL -->
 		<dependency>
@@ -80,15 +85,48 @@
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<!-- Hibernate Types pour le support JSONB -->
+		<dependency>
+			<groupId>com.vladmihalcea</groupId>
+			<artifactId>hibernate-types-52</artifactId>
+			<version>2.21.1</version>
+		</dependency>
+		<!-- BouncyCastle for digital signatures -->
+		<dependency>
+			<groupId>org.bouncycastle</groupId>
+			<artifactId>bcprov-jdk15on</artifactId>
+			<version>1.70</version>
+		</dependency>
+		<!-- Jasypt for encryption -->
+		<dependency>
+			<groupId>com.github.ulisesbocchio</groupId>
+			<artifactId>jasypt-spring-boot-starter</artifactId>
+			<version>3.0.5</version>
+		</dependency>
+
 	</dependencies>
 
 	<build>
-		<plugins>
-			<plugin>
-				<groupId>org.springframework.boot</groupId>
-				<artifactId>spring-boot-maven-plugin</artifactId>
-			</plugin>
-		</plugins>
+<plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.3.0</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                    <encoding>UTF-8</encoding>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
 	</build>
 
 </project>

@@ -25,13 +25,13 @@
 - [Contact](#contact)
 
 ## 🎯 À propos du projet
-TickIT est un module de gestion de tickets développé par Sofrecom Tunisie pour améliorer le processus de traitement des demandes d'extension fibre d'Orange France. Ce projet s'intègre avec BoTool, une application existante utilisée pour le traitement des dossiers de demande.
+TickIT est un système de gestion de tickets développé par Sofrecom Tunisie pour améliorer le processus de traitement des demandes d'extension fibre d'Orange France. Ce projet s'intègre avec BoTool, une application existante utilisée pour le traitement des dossiers de demande.
 
 ### Contexte
 Orange France propose des connexions fibre, et les clients peuvent demander une extension pour une connexion internet plus rapide en soumettant un dossier de demande ("case"). Ces demandes sont traitées par Sofrecom Tunisie via l'application BoTool.
 
 ### Situation Actuelle
-Face à l'identification de nouveaux besoins et d'améliorations potentielles, TickIT a été développé comme un nouveau module pour moderniser BoTool. Ce module se concentre particulièrement sur la gestion des blocages et la traçabilité des actions pendant le traitement des dossiers.
+Face à l'identification de nouveaux besoins et d'améliorations potentielles, TickIT a été développé comme un nouveau système intégré pour moderniser BoTool. Cette solution complète se concentre particulièrement sur la gestion des blocages et la traçabilité des actions pendant le traitement des dossiers.
 
 ### Objectifs
 - Améliorer la visibilité sur l'état des dossiers
