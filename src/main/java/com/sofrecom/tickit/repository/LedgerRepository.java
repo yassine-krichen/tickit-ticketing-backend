@@ -12,4 +12,10 @@ public interface LedgerRepository extends JpaRepository<LedgerEntry, UUID> {
     Optional<LedgerEntry> findTopByOrderByTimestampDesc();
 
     List<LedgerEntry> findByEntityIdAndEntityTypeOrderByTimestampAsc(String entityId, String entityType);
+
+    List<LedgerEntry> findByCaseId(String caseId);
+
+    List<LedgerEntry> findByCaseIdAndEntityType(String caseId, String entityType);
+
+    List<LedgerEntry> findAllByOrderByTimestampAsc();
 }

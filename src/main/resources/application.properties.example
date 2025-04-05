@@ -1,0 +1,5 @@
+# create application-secrets.properties and include these secrets
+crypto.private-key=*your private PEM key*
+crypto.public-key=*your public PEM key*
+
+

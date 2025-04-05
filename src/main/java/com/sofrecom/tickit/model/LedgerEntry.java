@@ -1,7 +1,6 @@
 package com.sofrecom.tickit.model;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.sofrecom.tickit.config.EncryptedJsonConverter;
 import com.vladmihalcea.hibernate.type.json.JsonBinaryType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -11,7 +10,6 @@ import org.hibernate.annotations.Type;
 import org.hibernate.annotations.TypeDef;
 
 import javax.persistence.Column;
-import javax.persistence.Convert;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Table;
@@ -89,6 +87,13 @@ public class LedgerEntry {
      */
     @Column(name = "entity_id", nullable = false)
     private String entityId;
+
+    /**
+     * Identifier of the case to which this ledger entry belongs.
+     * This field is essential for tracking the progression of treatment acts within a case.
+     */
+    @Column(name = "case_id", nullable = false)
+    private String caseId;
 
     /**
      * A JSONB snapshot of the entity's state at the time of this action.

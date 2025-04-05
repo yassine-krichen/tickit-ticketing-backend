@@ -25,4 +25,9 @@ public class LedgerEntryResponse {
     private String entityId;
     private JsonNode dataSnapshot;
     private String digitalSignature;
+    private String caseId;
+    
+    // Additional fields for a friendly response
+    private String status;
+    private String message;
 }
