@@ -114,6 +114,36 @@ public class LedgerController {
         return ResponseEntity.ok(responses);
     }
 
+    // API to get ledger entries by JSON field
+    @GetMapping("data-snapshot")
+    public ResponseEntity<List<LedgerEntry>> getLedgerEntriesByJsonField(
+            @RequestParam String jsonKey, 
+            @RequestParam String jsonValue) {
+        
+        List<LedgerEntry> entries = ledgerService.getLedgerEntriesByJsonField(jsonKey, jsonValue);
+        return ResponseEntity.ok(entries);
+    }
+
+    // API to get ledger entries by nested JSON field
+    @GetMapping("data-snapshot/nested")
+    public ResponseEntity<List<LedgerEntry>> getLedgerEntriesByNestedJsonField(
+            @RequestParam String jsonPath, 
+            @RequestParam String jsonValue) {
+        
+        List<LedgerEntry> entries = ledgerService.getLedgerEntriesByNestedJsonField(jsonPath, jsonValue);
+        return ResponseEntity.ok(entries);
+    }
+
+    // API to get ledger entries where JSON field contains a specific value
+    @GetMapping("data-snapshot/contains")
+    public ResponseEntity<List<LedgerEntry>> getLedgerEntriesByJsonFieldContains(
+            @RequestParam("jsonValue") String jsonValue) {
+                System.out.println(jsonValue);
+        
+        List<LedgerEntry> entries = ledgerService.getLedgerEntriesByJsonFieldContains(jsonValue);
+        return ResponseEntity.ok(entries);
+    }
+
     // --- Helper Methods ---
     // TODO: Move to a separate utility class or the service layer
     

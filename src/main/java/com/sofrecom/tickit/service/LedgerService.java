@@ -19,4 +19,13 @@ public interface LedgerService {
     boolean verifyBlockchain();
 
     List<LedgerEntry> getLedgerForCase(String caseId, String entityType);
+
+    // Query for JSON field
+    List<LedgerEntry> getLedgerEntriesByJsonField(String jsonKey, String jsonValue);
+
+    // Query for nested JSON field
+    List<LedgerEntry> getLedgerEntriesByNestedJsonField(String jsonPath, String jsonValue);
+
+    // Query for JSON field containing certain value
+    List<LedgerEntry> getLedgerEntriesByJsonFieldContains(String jsonValue);
 }

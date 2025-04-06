@@ -100,4 +100,20 @@ public class LedgerServiceImpl implements LedgerService {
             return ledgerRepository.findByCaseId(caseId);
         }
     }
+
+    @Override
+    public List<LedgerEntry> getLedgerEntriesByJsonField(String jsonKey, String jsonValue) {
+        return ledgerRepository.findByJsonField(jsonKey, jsonValue);
+    }
+
+    @Override
+    public List<LedgerEntry> getLedgerEntriesByNestedJsonField(String jsonPath, String jsonValue) {
+        return ledgerRepository.findByNestedJsonField(jsonPath, jsonValue);
+    }
+
+    @Override
+    public List<LedgerEntry> getLedgerEntriesByJsonFieldContains(String jsonValue) {
+        return ledgerRepository.findByJsonFieldContains(jsonValue);
+    }
+    
 }
