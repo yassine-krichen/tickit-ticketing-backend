@@ -115,7 +115,7 @@ public class LedgerController {
     }
 
     // API to get ledger entries by JSON field
-    @GetMapping("data-snapshot")
+    @GetMapping("/data-snapshot")
     public ResponseEntity<List<LedgerEntry>> getLedgerEntriesByJsonField(
             @RequestParam String jsonKey, 
             @RequestParam String jsonValue) {
