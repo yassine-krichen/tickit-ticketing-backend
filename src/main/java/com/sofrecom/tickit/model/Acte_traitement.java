@@ -89,6 +89,21 @@ public class Acte_traitement {
     @Column(name = "classification")
     private String classification;
 
+    /**
+     * The case this treatment act belongs to.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "case_id")
+    private Case associatedCase;
+
+    public Case getAssociatedCase() {
+        return associatedCase;
+    }
+
+    public void setAssociatedCase(Case associatedCase) {
+        this.associatedCase = associatedCase;
+    }
+    // TODO: see how to fit in the associatedCase in the constructor
 
     public Acte_traitement(Date dateReception, Date dateLivraison, Date dateValidation,
                            String affectation, int duree, String commentaire, String motif,
@@ -367,6 +382,7 @@ public class Acte_traitement {
         this.priorite = priorite;
         this.classification= classification;
     }
+    
     //Reaff
     public Acte_traitement(Prestation type_prestation,  Date dateReception, Date dateLivraison, Date dateValidation, String affectation, int duree, String commentaire, String motif, String statutFacturation, Date dateDeadline, String priorite) {
         this.typeprestation = type_prestation;
