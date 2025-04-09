@@ -4,17 +4,14 @@ import com.sofrecom.tickit.dto.BlockchainVerificationResponse;
 import com.sofrecom.tickit.dto.LedgerEntryRequest;
 import com.sofrecom.tickit.dto.LedgerEntryResponse;
 import com.sofrecom.tickit.dto.VerificationResponse;
-import com.sofrecom.tickit.exception.LedgerCreationException;
+import com.sofrecom.tickit.mapper.LedgerEntryMapper;
 import com.sofrecom.tickit.model.LedgerEntry;
-import com.sofrecom.tickit.repository.LedgerRepository;
 import com.sofrecom.tickit.service.LedgerService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -26,7 +23,7 @@ import javax.validation.Valid;
 public class LedgerController {
 
     private final LedgerService ledgerService;
-    private final LedgerRepository ledgerRepository;
+    private final LedgerEntryMapper ledgerEntryMapper;
 
     /**
      * Creates a new ledger entry.
@@ -36,22 +33,14 @@ public class LedgerController {
      */
     @PostMapping("/entry")
     public ResponseEntity<LedgerEntryResponse> createLedgerEntry(@Valid @RequestBody LedgerEntryRequest request) {
-        try {
             // Convert DTO to entity. Note: Ignore system-managed fields from request.
-            LedgerEntry entry = convertRequestToEntity(request);
+            LedgerEntry entry = ledgerEntryMapper.toEntity(request);
             ledgerService.saveLedgerEntry(entry);
             
-            LedgerEntryResponse response = convertEntityToResponse(entry);
+            LedgerEntryResponse response = ledgerEntryMapper.toResponse(entry);
             response.setStatus("SUCCESS");
             response.setMessage("Ledger entry created successfully");
             return ResponseEntity.ok(response);
-        } catch (LedgerCreationException e) {
-            LedgerEntryResponse errorResponse = LedgerEntryResponse.builder()
-                    .status("FAILURE")
-                    .message(e.getMessage())
-                    .build();
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-        }
     }
 
     /**
@@ -62,12 +51,7 @@ public class LedgerController {
      */
     @GetMapping("/verify/{entryId}")
     public ResponseEntity<VerificationResponse> verifyEntry(@PathVariable UUID entryId) {
-        Optional<LedgerEntry> entryOpt = ledgerRepository.findById(entryId);
-        if (!entryOpt.isPresent()) {
-            return ResponseEntity.notFound().build();
-        }
-        LedgerEntry entry = entryOpt.get();
-        boolean isValid = ledgerService.verifyIntegrity(entry);
+        boolean isValid = ledgerService.verifyEntry(entryId);
         VerificationResponse response = new VerificationResponse(isValid);
         return ResponseEntity.ok(response);
     }
@@ -96,7 +80,7 @@ public class LedgerController {
             @RequestParam(name = "entityType", required = false) String entityType) {
         List<LedgerEntry> entries = ledgerService.getLedgerForCase(caseId, entityType);
         List<LedgerEntryResponse> responses = entries.stream()
-                .map(this::convertEntityToResponse)
+                .map(ledgerEntryMapper::toResponse)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(responses);
     }
@@ -109,40 +93,11 @@ public class LedgerController {
         List<LedgerEntry> entries = ledgerService.getLedgerForCase(caseId, "TREATMENT_ACT");
         List<LedgerEntryResponse> responses = entries.stream()
                 .sorted((a, b) -> a.getTimestamp().compareTo(b.getTimestamp()))
-                .map(this::convertEntityToResponse)
+                .map(ledgerEntryMapper::toResponse)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(responses);
     }
 
-    // --- Helper Methods ---
-    // TODO: Move to a separate utility class or the service layer
     
-    private LedgerEntry convertRequestToEntity(LedgerEntryRequest request) {
-        return LedgerEntry.builder()
-                .id(UUID.randomUUID())
-                .entityId(request.getEntityId())
-                .entityType(request.getEntityType())
-                .caseId(request.getCaseId())         // Set the caseId
-                .userFingerprint(request.getUserFingerprint())
-                .actionType(request.getActionType())
-                .dataSnapshot(request.getDataSnapshot())
-                .build();
-    }
-    
-    private LedgerEntryResponse convertEntityToResponse(LedgerEntry entry) {
-        return LedgerEntryResponse.builder()
-                .id(entry.getId())
-                .hash(entry.getHash())
-                .previousHash(entry.getPreviousHash())
-                .timestamp(entry.getTimestamp())
-                .userFingerprint(entry.getUserFingerprint())
-                .actionType(entry.getActionType())
-                .entityType(entry.getEntityType())
-                .entityId(entry.getEntityId())
-                .caseId(entry.getCaseId())           // Map the caseId
-                .dataSnapshot(entry.getDataSnapshot())
-                .digitalSignature(entry.getDigitalSignature())
-                .build();
-    }
     
 }

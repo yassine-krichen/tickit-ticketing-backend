@@ -99,7 +99,6 @@ public class DESAT  extends Acte_traitement{
 public DESAT(String cog,String fi,String motif, String type_element, String commentaire, Prestation type_prestation, int quantite,
 		String statutFacturation, Date dateReception, Date dateDeadline,String ui) {
 	super(motif, type_element, commentaire, type_prestation, quantite, statutFacturation, dateReception, dateDeadline);
-	// TODO Auto-generated constructor stub
 	this.cog= cog;
 	this.fi= fi;
 	this.ui = ui;
@@ -136,7 +135,6 @@ public DESAT(String idacte, String refTacheBPU, Prestation type_prestation, Stri
 		Date date_reafictation,String cOG, String ui, Date date_liv_reafictation, int nbreCoupleurs) {
 	super(idacte, refTacheBPU, type_prestation, type_element, quantite, dateReception, dateLivraison, dateValidation, affectation,
 			duree, commentaire, motif, statutFacturation, dateReprise, repriseFacturable, dateDeadline, priorite, classification);
-	// TODO Auto-generated constructor stub
 	
 	this.zone = zONE;
 	this.fi = fI;
@@ -157,7 +155,6 @@ public DESAT(String idacte, String refTacheBPU, Prestation type_prestation, Stri
 				 Date date_reafictation,String cOG, String ui, Date date_liv_reafictation, int nbreCoupleurs) {
 		super( type_prestation, type_element, quantite, dateReception, dateLivraison, dateValidation, affectation,
 				duree, commentaire, motif, statutFacturation, dateReprise, repriseFacturable, dateDeadline, priorite);
-		// TODO Auto-generated constructor stub
 
 		this.zone = zONE;
 		this.fi = fI;
