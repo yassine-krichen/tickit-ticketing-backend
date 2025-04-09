@@ -3,7 +3,8 @@ package com.sofrecom.tickit.controller;
 import com.sofrecom.tickit.dto.TicketRequest;
 import com.sofrecom.tickit.dto.TicketResponse;
 import com.sofrecom.tickit.dto.TicketUpdateDTO;
-import com.sofrecom.tickit.exception.TicketCreationException;
+import com.sofrecom.tickit.exception.EntityCreationException;
+import com.sofrecom.tickit.mapper.TicketMapper;
 import com.sofrecom.tickit.model.Ticket;
 import com.sofrecom.tickit.service.TicketService;
 import lombok.RequiredArgsConstructor;
@@ -22,18 +23,19 @@ import java.util.stream.Collectors;
 public class TicketController {
 
     private final TicketService ticketService;
+    private final TicketMapper ticketMapper;
 
     @PostMapping
     public ResponseEntity<TicketResponse> createTicket(@Valid @RequestBody TicketRequest request) {
         try {
-            Ticket ticket = convertRequestToEntity(request);
+            Ticket ticket = ticketMapper.toEntity(request);
             Ticket createdTicket = ticketService.createTicket(ticket);
 
-            TicketResponse response = convertEntityToResponse(createdTicket);
+            TicketResponse response = ticketMapper.toResponse(createdTicket);
             response.setStatusMessage("SUCCESS");
             response.setMessage("Ticket created successfully");
             return ResponseEntity.ok(response);
-        } catch (TicketCreationException e) {
+        } catch (EntityCreationException e) {
             TicketResponse errorResponse = TicketResponse.builder()
                     .statusMessage("FAILURE")
                     .message(e.getMessage())
@@ -48,7 +50,7 @@ public class TicketController {
         if (ticket == null) {
             return ResponseEntity.notFound().build();
         }
-        TicketResponse response = convertEntityToResponse(ticket);
+        TicketResponse response = ticketMapper.toResponse(ticket);
         return ResponseEntity.ok(response);
     }
 
@@ -61,7 +63,7 @@ public ResponseEntity<List<TicketResponse>> getAllTickets(
     
     List<Ticket> tickets = ticketService.getAllTickets(status, priority, issuedBy, acteTraitement);
     List<TicketResponse> responses = tickets.stream()
-            .map(this::convertEntityToResponse)
+            .map(ticketMapper::toResponse)
             .collect(Collectors.toList());
     return ResponseEntity.ok(responses);
 }
@@ -73,11 +75,11 @@ public ResponseEntity<List<TicketResponse>> getAllTickets(
             @RequestParam Ticket.Status status) {
         try {
             Ticket updatedTicket = ticketService.updateTicketStatus(ticketId, status);
-            TicketResponse response = convertEntityToResponse(updatedTicket);
+            TicketResponse response = ticketMapper.toResponse(updatedTicket);
             response.setStatusMessage("SUCCESS");
             response.setMessage("Ticket status updated successfully");
             return ResponseEntity.ok(response);
-        } catch (TicketCreationException e) {
+        } catch (EntityCreationException e) {
             TicketResponse errorResponse = TicketResponse.builder()
                     .statusMessage("FAILURE")
                     .message(e.getMessage())
@@ -92,11 +94,11 @@ public ResponseEntity<List<TicketResponse>> getAllTickets(
             @Valid @RequestBody TicketUpdateDTO request) {
         try {
             Ticket updatedTicket = ticketService.updateTicket(ticketId, request);
-            TicketResponse response = convertEntityToResponse(updatedTicket);
+            TicketResponse response = ticketMapper.toResponse(updatedTicket);
             response.setStatusMessage("SUCCESS");
             response.setMessage("Ticket updated successfully");
             return ResponseEntity.ok(response);
-        } catch (TicketCreationException e) {
+        } catch (EntityCreationException e) {
             TicketResponse errorResponse = TicketResponse.builder()
                     .statusMessage("FAILURE")
                     .message(e.getMessage())
@@ -110,35 +112,12 @@ public ResponseEntity<List<TicketResponse>> getAllTickets(
         try {
             ticketService.deleteTicket(ticketId);
             return ResponseEntity.ok("Ticket deleted successfully");
-        } catch (TicketCreationException e) {
+        } catch (EntityCreationException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Error deleting ticket: " + e.getMessage());
         }
     }
 
     // Helper methods for conversion
 
-    private Ticket convertRequestToEntity(TicketRequest request) {
-        return Ticket.builder()
-                .acteTraitement(request.getActeTraitement())
-                .subject(request.getSubject())
-                .description(request.getDescription())
-                .priority(request.getPriority())
-                .status(request.getStatus())
-                .issuedBy(request.getIssuedBy())
-                .build();
-    }
-
-    private TicketResponse convertEntityToResponse(Ticket ticket) {
-        return TicketResponse.builder()
-                .id(ticket.getId())
-                .acteTraitement(ticket.getActeTraitement())
-                .subject(ticket.getSubject())
-                .description(ticket.getDescription())
-                .priority(ticket.getPriority())
-                .status(ticket.getStatus())
-                .issuedBy(ticket.getIssuedBy())
-                .createdAt(ticket.getCreatedAt())
-                .updatedAt(ticket.getUpdatedAt())
-                .build();
-    }
+    
 }

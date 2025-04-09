@@ -3,16 +3,17 @@ package com.sofrecom.tickit.impl;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
-import com.sofrecom.tickit.exception.LedgerCreationException;
+import com.sofrecom.tickit.exception.EntityCreationException;
+import com.sofrecom.tickit.exception.ResourceNotFoundException;
 import com.sofrecom.tickit.model.LedgerEntry;
 import com.sofrecom.tickit.repository.LedgerRepository;
 import com.sofrecom.tickit.service.LedgerService;
 import com.sofrecom.tickit.util.CryptoUtil;
 
-// TODO: check out the non used functions and remove them
 
 @Service
 public class LedgerServiceImpl implements LedgerService {
@@ -45,7 +46,7 @@ public class LedgerServiceImpl implements LedgerService {
             
             ledgerRepository.save(entry);
         } catch (Exception e) {
-            throw new LedgerCreationException("Failed to create ledger entry", e);
+            throw new EntityCreationException("LedgerEntry", "Failed to create ledger entry", e);
         }
     }
     
@@ -54,9 +55,6 @@ public class LedgerServiceImpl implements LedgerService {
             .map(LedgerEntry::getHash);
     }
     
-    public List<LedgerEntry> getLedgerForEntity(String entityId, String entityType) {
-        return ledgerRepository.findByEntityIdAndEntityTypeOrderByTimestampAsc(entityId, entityType);
-    }
     
     public boolean verifyIntegrity(LedgerEntry entry) {
         String computedHash = cryptoUtil.computeHash(
@@ -72,6 +70,18 @@ public class LedgerServiceImpl implements LedgerService {
         );
         
         return hashValid && signatureValid;
+    }
+
+    @Override
+    public boolean verifyEntry(UUID entryId) {
+        LedgerEntry entry = ledgerRepository.findById(entryId)
+            .orElseThrow(() -> new ResourceNotFoundException(
+                "LedgerEntry", 
+                "Id",
+                entryId
+            ));
+
+        return verifyIntegrity(entry);
     }
 
     @Override

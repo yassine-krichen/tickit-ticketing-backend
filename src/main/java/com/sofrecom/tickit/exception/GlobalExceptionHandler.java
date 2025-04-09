@@ -20,14 +20,14 @@ import java.util.HashMap;
 @ControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
-    // handle global exceptions
-    @ExceptionHandler(Exception.class)
+    // global exception handler for generic exceptions
     public ResponseEntity<ErrorDetails> handleGlobalException(Exception ex, WebRequest webRequest) {
         ErrorDetails errorDetails = new ErrorDetails(new Date(), ex.getMessage(), webRequest.getDescription(false));
 
         return new ResponseEntity<>(errorDetails, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
+    // validation exception handler
     @SuppressWarnings("null")
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex,
@@ -43,7 +43,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
     }
 
-    // handle specific exceptions
+    // specific handler for ResourceNotFoundException
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorDetails> handleResourceNotFoundException(ResourceNotFoundException ex,
             WebRequest webRequest) {
@@ -51,4 +51,15 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
         return new ResponseEntity<>(errorDetails, HttpStatus.NOT_FOUND);
     }
+
+    // Specific handler for EntityCreationException
+    @ExceptionHandler(EntityCreationException.class)
+    public ResponseEntity<ErrorDetails> handleEntityCreationException(
+            EntityCreationException ex, WebRequest webRequest) {
+        ErrorDetails errorDetails = new ErrorDetails(
+            new Date(), ex.getMessage(), webRequest.getDescription(false)
+        );
+        // 400 BAD REQUEST is a typical status for a creation error due to invalid input.
+        return new ResponseEntity<>(errorDetails, HttpStatus.BAD_REQUEST);
+    } 
 }

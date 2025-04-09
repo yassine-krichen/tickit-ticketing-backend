@@ -1,7 +1,7 @@
 package com.sofrecom.tickit.impl;
 
 import com.sofrecom.tickit.dto.TicketUpdateDTO;
-import com.sofrecom.tickit.exception.TicketCreationException;
+import com.sofrecom.tickit.exception.EntityCreationException;
 import com.sofrecom.tickit.model.Ticket;
 import com.sofrecom.tickit.repository.TicketRepository;
 import com.sofrecom.tickit.service.TicketService;
@@ -21,13 +21,13 @@ public class TicketServiceImpl implements TicketService {
     private final TicketRepository ticketRepository;
 
     @Override
-    public Ticket createTicket(Ticket ticket) throws TicketCreationException {
+    public Ticket createTicket(Ticket ticket) throws EntityCreationException {
         try {
             LocalDateTime now = LocalDateTime.now();
             ticket.setCreatedAt(now);
             return ticketRepository.save(ticket);
         } catch (Exception e) {
-            throw new TicketCreationException("Failed to create ticket", e);
+            throw new EntityCreationException("Ticket", "Failed to create ticket", e);
         }
     }
 
@@ -58,10 +58,10 @@ public List<Ticket> getAllTickets(Ticket.Status status, Ticket.Priority priority
 }
 
     @Override
-    public Ticket updateTicketStatus(UUID ticketId, Ticket.Status status) throws TicketCreationException {
+    public Ticket updateTicketStatus(UUID ticketId, Ticket.Status status) throws EntityCreationException {
         Ticket ticket = getTicketById(ticketId);
         if (ticket == null) {
-            throw new TicketCreationException("Ticket not found");
+            throw new EntityCreationException("Ticket", "Ticket not found");
         }
         ticket.setStatus(status);
         ticket.setUpdatedAt(LocalDateTime.now());
@@ -69,10 +69,10 @@ public List<Ticket> getAllTickets(Ticket.Status status, Ticket.Priority priority
     }
 
     @Override
-    public Ticket updateTicket(UUID ticketId, TicketUpdateDTO ticketRequest) throws TicketCreationException {
+    public Ticket updateTicket(UUID ticketId, TicketUpdateDTO ticketRequest) throws EntityCreationException {
         Ticket ticket = getTicketById(ticketId);
         if (ticket == null) {
-            throw new TicketCreationException("Ticket not found");
+            throw new EntityCreationException("Ticket", "Ticket not found");
         }
     
     // Update only if provided fields are not null or empty (ignore acteTraitement)
@@ -101,19 +101,19 @@ public List<Ticket> getAllTickets(Ticket.Status status, Ticket.Priority priority
 }
 
     @Override
-    public void deleteTicket(UUID ticketId) throws TicketCreationException {
+    public void deleteTicket(UUID ticketId) throws EntityCreationException {
         Ticket ticket = getTicketById(ticketId);
         if (ticket == null) {
-            throw new TicketCreationException("Ticket not found");
+            throw new EntityCreationException("Ticket", "Ticket not found");
         }
         ticketRepository.delete(ticket);
     }
 
-    private Ticket saveTicket(Ticket ticket) throws TicketCreationException {
+    private Ticket saveTicket(Ticket ticket) throws EntityCreationException {
         try {
             return ticketRepository.save(ticket);
         } catch (Exception e) {
-            throw new TicketCreationException("Failed to update ticket", e);
+            throw new EntityCreationException("Ticket", "Failed to save ticket", e);
         }
     }
 }

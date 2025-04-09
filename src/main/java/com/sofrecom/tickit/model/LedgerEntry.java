@@ -12,6 +12,7 @@ import org.hibernate.annotations.TypeDef;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
+import javax.persistence.Index;
 import javax.persistence.Table;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -29,7 +30,15 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "ledger_entry")
+@Table(
+    name = "ledger_entry",
+    indexes = {
+        // Composite index tailored to optimize:
+        // SELECT * FROM ledger_entry 
+        // WHERE case_id = ? AND entity_type = ? ORDER BY timestamp ASC;
+        @Index(name = "idx_case_entity_timestamp", columnList = "case_id, entity_type, timestamp")
+    }
+)
 @TypeDef(name = "jsonb", typeClass = JsonBinaryType.class)
 public class LedgerEntry {
 
