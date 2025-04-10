@@ -11,7 +11,5 @@ import java.util.UUID;
 
 public interface TicketRepository extends JpaRepository<Ticket, UUID> , JpaSpecificationExecutor<Ticket>{
 
-    @Query("SELECT new com.sofrecom.tickit.dto.TicketCountDTO(t.status, COUNT(t)) " +
-           "FROM Ticket t GROUP BY t.status")
-    List<TicketCount> countTicketsByStatus();
+    
 }

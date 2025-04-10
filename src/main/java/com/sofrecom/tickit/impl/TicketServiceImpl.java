@@ -15,11 +15,21 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Root;
+
 @Service
 @RequiredArgsConstructor
 public class TicketServiceImpl implements TicketService {
 
     private final TicketRepository ticketRepository;
+
+    @PersistenceContext
+    private EntityManager entityManager;
+
 
     @Override
     public Ticket createTicket(Ticket ticket) throws EntityCreationException {
@@ -120,7 +130,23 @@ public List<Ticket> getAllTickets(Ticket.Status status, Ticket.Priority priority
 
     @Override
     public List<TicketCount> getTicketCountByStatus() {
-        return ticketRepository.countTicketsByStatus();
+        // Use the Criteria API to produce a query equivalent to the removed repository query.
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        // Create a query returning TicketCount
+        CriteriaQuery<TicketCount> query = cb.createQuery(TicketCount.class);
+        Root<Ticket> root = query.from(Ticket.class);
+        
+        // Build query that constructs new TicketCount objects with the status and count.
+        query.select(
+                cb.construct(
+                        TicketCount.class, 
+                        root.get("status"), 
+                        cb.count(root)
+                )
+        )
+        .groupBy(root.get("status"));
+        
+        return entityManager.createQuery(query).getResultList();
     }
     
 }
