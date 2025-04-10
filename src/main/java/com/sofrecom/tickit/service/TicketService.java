@@ -1,6 +1,7 @@
 package com.sofrecom.tickit.service;
 
 import com.sofrecom.tickit.model.Ticket;
+import com.sofrecom.tickit.dto.TicketCount;
 import com.sofrecom.tickit.dto.TicketUpdateDTO;
 import com.sofrecom.tickit.exception.EntityCreationException;
 
@@ -20,4 +21,6 @@ public interface TicketService {
     Ticket updateTicket(UUID ticketId, TicketUpdateDTO ticketRequest) throws EntityCreationException;
 
     void deleteTicket(UUID ticketId) throws EntityCreationException;
+
+    List<TicketCount> getTicketCountByStatus();
 }

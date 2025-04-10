@@ -1,5 +1,6 @@
 package com.sofrecom.tickit.impl;
 
+import com.sofrecom.tickit.dto.TicketCount;
 import com.sofrecom.tickit.dto.TicketUpdateDTO;
 import com.sofrecom.tickit.exception.EntityCreationException;
 import com.sofrecom.tickit.model.Ticket;
@@ -116,4 +117,10 @@ public List<Ticket> getAllTickets(Ticket.Status status, Ticket.Priority priority
             throw new EntityCreationException("Ticket", "Failed to save ticket", e);
         }
     }
+
+    @Override
+    public List<TicketCount> getTicketCountByStatus() {
+        return ticketRepository.countTicketsByStatus();
+    }
+    
 }

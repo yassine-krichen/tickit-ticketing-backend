@@ -1,5 +1,6 @@
 package com.sofrecom.tickit.controller;
 
+import com.sofrecom.tickit.dto.TicketCount;
 import com.sofrecom.tickit.dto.TicketRequest;
 import com.sofrecom.tickit.dto.TicketResponse;
 import com.sofrecom.tickit.dto.TicketUpdateDTO;
@@ -68,6 +69,12 @@ public ResponseEntity<List<TicketResponse>> getAllTickets(
     return ResponseEntity.ok(responses);
 }
 
+    @GetMapping("/counts-by-status")
+    public ResponseEntity<List<TicketCount>> getTicketCountByStatus() {
+        List<TicketCount> counts = ticketService.getTicketCountByStatus();
+        return ResponseEntity.ok(counts);
+    }
+   
 
     @PutMapping("/{ticketId}/status")
     public ResponseEntity<TicketResponse> updateTicketStatus( 
@@ -117,7 +124,6 @@ public ResponseEntity<List<TicketResponse>> getAllTickets(
         }
     }
 
-    // Helper methods for conversion
 
     
 }
