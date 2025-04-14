@@ -91,6 +91,13 @@
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<!-- H2 for in-memory database tests -->
+		<dependency>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+
 		<!-- Hibernate Types pour le support JSONB -->
 		<dependency>
 			<groupId>com.vladmihalcea</groupId>

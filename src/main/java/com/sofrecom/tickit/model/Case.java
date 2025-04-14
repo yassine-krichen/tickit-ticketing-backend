@@ -51,7 +51,8 @@ public class Case {
     /**
      * Type of the case in our system (referred to as "prestation").
      */
-    private String type;
+    @Enumerated(EnumType.STRING)
+    private CaseType type;
 
     /**
      * Current status of the case.
