@@ -1,17 +1,19 @@
 package com.sofrecom.tickit.dto;
 
-import com.sofrecom.tickit.model.Ticket.Status;
-
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
-@Builder
+@AllArgsConstructor
 public class TicketCount {
-    private Status status;
-    private long count;
+    private Object category; // Can be Status, Type, Step, SubStatus, etc.
+    private Long count;
+    
+    // Additional constructor for specifying the category type explicitly
+    public TicketCount(String categoryType, Object category, Long count) {
+        this.category = categoryType + ":" + category;
+        this.count = count;
+    }
 }

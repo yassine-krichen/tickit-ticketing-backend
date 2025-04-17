@@ -2,6 +2,7 @@ package com.sofrecom.tickit.model;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.vladmihalcea.hibernate.type.json.JsonBinaryType;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -40,6 +41,7 @@ import java.util.UUID;
     }
 )
 @TypeDef(name = "jsonb", typeClass = JsonBinaryType.class)
+@Schema(description = "Represents an immutable blockchain ledger entry that records entity state changes")
 public class LedgerEntry {
 
     /**
@@ -47,6 +49,7 @@ public class LedgerEntry {
      */
     @Id
     @Column(name = "id", nullable = false)
+    @Schema(description = "Unique identifier for the ledger entry", example = "123e4567-e89b-12d3-a456-426614174000")
     private UUID id;
 
     /**
@@ -54,6 +57,7 @@ public class LedgerEntry {
      * It is computed from the entry's content and helps to detect tampering.
      */
     @Column(name = "hash", nullable = false, columnDefinition = "text", length = 1000)
+    @Schema(description = "Cryptographic hash of this ledger entry", example = "0x1a2b3c4d5e6f7g8h9i0j...")
     private String hash;
 
     /**
@@ -61,12 +65,14 @@ public class LedgerEntry {
      * For the very first (genesis) entry, this could be a constant value like "GENESIS" or "0".
      */
     @Column(name = "previous_hash", nullable = false, columnDefinition = "text", length = 1000)
+    @Schema(description = "Hash of the previous ledger entry in the chain", example = "0xabcdef1234567890...")
     private String previousHash;
 
     /**
      * Timestamp when this ledger entry was created.
      */
     @Column(name = "timestamp", nullable = false)
+    @Schema(description = "Timestamp when this ledger entry was created", example = "2023-01-15T14:30:00")
     private LocalDateTime timestamp;
 
     /**
@@ -74,6 +80,7 @@ public class LedgerEntry {
      * This is used for auditing and ensuring non-repudiation.
      */
     @Column(name = "user_fingerprint", nullable = false)
+    @Schema(description = "Identifier of the user who performed the action", example = "john.doe@sofrecom.com")
     private String userFingerprint;
 
     /**
@@ -81,6 +88,7 @@ public class LedgerEntry {
      * Examples include CREATE, UPDATE, or DELETE.
      */
     @Column(name = "action_type", nullable = false)
+    @Schema(description = "Type of action recorded by this ledger entry", example = "CREATE", implementation = ActionType.class)
     private ActionType actionType;
 
     /**
@@ -88,6 +96,7 @@ public class LedgerEntry {
      * Having this as a structured field improves query performance.
      */
     @Column(name = "entity_type", nullable = false)
+    @Schema(description = "Type of entity associated with this ledger entry", example = "CASE")
     private String entityType;
 
     /**
@@ -95,6 +104,7 @@ public class LedgerEntry {
      * This field enables efficient filtering and indexing.
      */
     @Column(name = "entity_id", nullable = false)
+    @Schema(description = "Unique identifier of the entity that this ledger entry records", example = "123e4567-e89b-12d3-a456-426614174000")
     private String entityId;
 
     /**
@@ -102,6 +112,7 @@ public class LedgerEntry {
      * This field is essential for tracking the progression of treatment acts within a case.
      */
     @Column(name = "case_id", nullable = false)
+    @Schema(description = "Identifier of the case to which this ledger entry belongs", example = "CASE-2023-001")
     private String caseId;
 
     /**
@@ -113,6 +124,7 @@ public class LedgerEntry {
      */
     @Type(type = "jsonb")
     @Column(name = "data_snapshot", columnDefinition = "jsonb", nullable = false)
+    @Schema(description = "JSON snapshot of the entity's state at the time of this action")
     private JsonNode dataSnapshot;
 
 
@@ -122,12 +134,14 @@ public class LedgerEntry {
      * An example value might be a Base64-encoded string.
      */
     @Column(name = "digital_signature", nullable = false, columnDefinition = "text", length = 1000)
+    @Schema(description = "Digital signature that ensures the authenticity of the entry", example = "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCqGKukO1De...")
     private String digitalSignature;
 
     /**
      * Enum representing the possible types of actions recorded in a ledger entry.
      * Using an enum ensures only valid action types can be set.
      */
+    @Schema(description = "Types of actions that can be recorded in the ledger")
     public enum ActionType {
         CREATE,
         UPDATE,

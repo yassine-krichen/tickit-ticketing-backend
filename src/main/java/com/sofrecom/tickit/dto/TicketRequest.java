@@ -1,5 +1,6 @@
 package com.sofrecom.tickit.dto;
 
+import com.sofrecom.tickit.model.CaseType;
 import com.sofrecom.tickit.model.Ticket.Priority;
 import com.sofrecom.tickit.model.Ticket.Status;
 import lombok.AllArgsConstructor;
@@ -24,6 +25,14 @@ public class TicketRequest {
 
     @NotBlank(message = "Description is required")
     private String description;
+    
+    @NotNull(message = "Type is required")
+    private CaseType type;
+    
+    @NotNull(message = "Step is required")
+    private CaseType step;
+    
+    private String subStatus;
 
     @NotNull(message = "Priority is required")
     private Priority priority;

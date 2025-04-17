@@ -29,7 +29,15 @@ public interface LedgerRepository extends JpaRepository<LedgerEntry, UUID> {
                "WHERE data_snapshot #>> string_to_array(:jsonPath, '.') = :jsonValue", nativeQuery = true)
     List<LedgerEntry> findByNestedJsonField(@Param("jsonPath") String jsonPath, @Param("jsonValue") String jsonValue);
 
+    /**
+     * Find ledger entries where the data snapshot contains the specified text.
+     * This converts the JSONB to text and uses PostgreSQL's position function to check for text
+     * containment, which is more reliable than ILIKE for this purpose.
+     * 
+     * @param searchText A simple text string to search for in the data snapshot
+     * @return List of matching ledger entries
+     */
     @Query(value = "SELECT * FROM ledger_entry " +
-               "WHERE data_snapshot @> CAST(:jsonValue AS jsonb)", nativeQuery = true)
-    List<LedgerEntry> findByJsonFieldContains(@Param("jsonValue") String jsonValue);
+               "WHERE position(lower(?1) in lower(cast(data_snapshot as text))) > 0", nativeQuery = true)
+    List<LedgerEntry> findByJsonFieldContains(String searchText);
 }

@@ -3,6 +3,7 @@ package com.sofrecom.tickit.impl;
 import com.sofrecom.tickit.dto.TicketCount;
 import com.sofrecom.tickit.dto.TicketUpdateDTO;
 import com.sofrecom.tickit.exception.EntityCreationException;
+import com.sofrecom.tickit.model.CaseType;
 import com.sofrecom.tickit.model.Ticket;
 import com.sofrecom.tickit.repository.TicketRepository;
 import com.sofrecom.tickit.service.TicketService;
@@ -11,9 +12,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.UUID;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
@@ -29,13 +32,130 @@ public class TicketServiceImpl implements TicketService {
 
     @PersistenceContext
     private EntityManager entityManager;
+    
+    // Map defining valid type-step combinations
+    private static final Map<CaseType, List<CaseType>> VALID_TYPE_STEP_MAPPINGS = initTypeStepMappings();
+    
+    // SLA configurations based on type, step, and priority
+    private static final Map<String, Duration> RESPONSE_SLA_CONFIGS = initResponseSlaConfigs();
+    private static final Map<String, Duration> RESOLUTION_SLA_CONFIGS = initResolutionSlaConfigs();
 
+    private static Map<CaseType, List<CaseType>> initTypeStepMappings() {
+        Map<CaseType, List<CaseType>> mappings = new HashMap<>();
+        
+        // GRAFIC case type can only have GRAFIC as step
+        mappings.put(CaseType.GRAFIC, Collections.singletonList(CaseType.GRAFIC));
+        
+        // BRAME case type with its valid steps
+        mappings.put(CaseType.BRAME, Arrays.asList(
+            CaseType.BRAME_PRE_ETUDE, CaseType.BRAME_ETUDE, 
+            CaseType.BRAME_RACCORDEMENT, CaseType.BRAME_CONTROLE_TRAVAUX
+        ));
+        
+        // XOIP case type with its valid steps
+        mappings.put(CaseType.XOIP, Arrays.asList(
+            CaseType.AFFECTATION_ET_MISE_EN_CAUSE, CaseType.CREANCE, CaseType.RAPPEL
+        ));
+        
+        // Add more type-step mappings for different case types
+        mappings.put(CaseType.TRAVAUX_TIERS, Arrays.asList(
+            CaseType.CONTROLE_TRAVAUX
+        ));
+        
+        mappings.put(CaseType.LIEN_NROPM, Arrays.asList(
+            CaseType.CONTROLE_TRAVAUX_LIEN_NROPM
+        ));
+        
+        mappings.put(CaseType.DESATURATIONS_COUPLEURS, Arrays.asList(
+            CaseType.CONTROLE_TRAVAUX_DESATURATIONS_COUPLEURS
+        ));
+        
+        return Collections.unmodifiableMap(mappings);
+    }
+    
+    private static Map<String, Duration> initResponseSlaConfigs() {
+        Map<String, Duration> slaConfigs = new HashMap<>();
+        
+        // Format: "TYPE:STEP:PRIORITY" -> Duration
+        // P1 (high priority) tickets
+        slaConfigs.put("GRAFIC:GEORESO:P1", Duration.ofHours(2));
+        slaConfigs.put("GRAFIC:GEORESO_CABLE:P1", Duration.ofHours(2));
+        slaConfigs.put("BRAME:BRAME_ETUDE:P1", Duration.ofHours(1));
+        slaConfigs.put("BRAME:BRAME_RACCORDEMENT:P1", Duration.ofHours(1));
+        
+        // P2 (medium priority) tickets
+        slaConfigs.put("GRAFIC:GEORESO:P2", Duration.ofHours(4));
+        slaConfigs.put("GRAFIC:GEORESO_CABLE:P2", Duration.ofHours(4));
+        slaConfigs.put("BRAME:BRAME_ETUDE:P2", Duration.ofHours(3));
+        slaConfigs.put("BRAME:BRAME_RACCORDEMENT:P2", Duration.ofHours(3));
+        
+        // P3 (lower priority) tickets 
+        slaConfigs.put("GRAFIC:GEORESO:P3", Duration.ofHours(8));
+        slaConfigs.put("GRAFIC:GEORESO_CABLE:P3", Duration.ofHours(8));
+        slaConfigs.put("BRAME:BRAME_ETUDE:P3", Duration.ofHours(6));
+        slaConfigs.put("BRAME:BRAME_RACCORDEMENT:P3", Duration.ofHours(6));
+        
+        // Default fallback durations if specific combination not found
+        slaConfigs.put("DEFAULT:P1", Duration.ofHours(2));
+        slaConfigs.put("DEFAULT:P2", Duration.ofHours(4));
+        slaConfigs.put("DEFAULT:P3", Duration.ofHours(8));
+        slaConfigs.put("DEFAULT:P4", Duration.ofHours(12));
+        slaConfigs.put("DEFAULT:P5", Duration.ofHours(24));
+        
+        return Collections.unmodifiableMap(slaConfigs);
+    }
+    
+    private static Map<String, Duration> initResolutionSlaConfigs() {
+        Map<String, Duration> slaConfigs = new HashMap<>();
+        
+        // Format: "TYPE:STEP:PRIORITY" -> Duration
+        // P1 (high priority) tickets
+        slaConfigs.put("GRAFIC:GEORESO:P1", Duration.ofHours(8));
+        slaConfigs.put("GRAFIC:GEORESO_CABLE:P1", Duration.ofHours(8));
+        slaConfigs.put("BRAME:BRAME_ETUDE:P1", Duration.ofHours(4));
+        slaConfigs.put("BRAME:BRAME_RACCORDEMENT:P1", Duration.ofHours(8));
+        
+        // P2 (medium priority) tickets
+        slaConfigs.put("GRAFIC:GEORESO:P2", Duration.ofHours(16));
+        slaConfigs.put("GRAFIC:GEORESO_CABLE:P2", Duration.ofHours(16));
+        slaConfigs.put("BRAME:BRAME_ETUDE:P2", Duration.ofHours(12));
+        slaConfigs.put("BRAME:BRAME_RACCORDEMENT:P2", Duration.ofHours(16));
+        
+        // P3 (lower priority) tickets
+        slaConfigs.put("GRAFIC:GEORESO:P3", Duration.ofHours(24));
+        slaConfigs.put("GRAFIC:GEORESO_CABLE:P3", Duration.ofHours(24));
+        slaConfigs.put("BRAME:BRAME_ETUDE:P3", Duration.ofHours(24));
+        slaConfigs.put("BRAME:BRAME_RACCORDEMENT:P3", Duration.ofHours(24));
+        
+        // Default fallback durations if specific combination not found
+        slaConfigs.put("DEFAULT:P1", Duration.ofHours(8));
+        slaConfigs.put("DEFAULT:P2", Duration.ofHours(16));
+        slaConfigs.put("DEFAULT:P3", Duration.ofDays(1));
+        slaConfigs.put("DEFAULT:P4", Duration.ofDays(2));
+        slaConfigs.put("DEFAULT:P5", Duration.ofDays(5));
+        
+        return Collections.unmodifiableMap(slaConfigs);
+    }
 
     @Override
     public Ticket createTicket(Ticket ticket) throws EntityCreationException {
         try {
+            // Validate type-step combination
+            if (ticket.getType() != null && ticket.getStep() != null && 
+                !isValidTypeStepCombination(ticket.getType(), ticket.getStep())) {
+                throw new EntityCreationException("Ticket", 
+                    "Invalid type-step combination: " + ticket.getType() + " cannot have step " + ticket.getStep());
+            }
+            
             LocalDateTime now = LocalDateTime.now();
             ticket.setCreatedAt(now);
+            
+            // Calculate and set SLAs
+            if (ticket.getType() != null && ticket.getStep() != null && ticket.getPriority() != null) {
+                ticket.setResponseSla(calculateResponseSLA(ticket.getType(), ticket.getStep(), ticket.getPriority()));
+                ticket.setResolutionSla(calculateResolutionSLA(ticket.getType(), ticket.getStep(), ticket.getPriority()));
+            }
+            
             return ticketRepository.save(ticket);
         } catch (Exception e) {
             throw new EntityCreationException("Ticket", "Failed to create ticket", e);
@@ -48,25 +168,66 @@ public class TicketServiceImpl implements TicketService {
     }  
 
     @Override
-public List<Ticket> getAllTickets(Ticket.Status status, Ticket.Priority priority, String issuedBy, String acteTraitement) {
-    Specification<Ticket> spec = Specification.where(null);
+    public List<Ticket> getAllTickets(Ticket.Status status, Ticket.Priority priority, String issuedBy, String acteTraitement) {
+        try {
+            Specification<Ticket> spec = Specification.where(null);
+            
+            if (status != null) {
+                spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), status));
+            }
+            if (priority != null) {
+                spec = spec.and((root, query, cb) -> cb.equal(root.get("priority"), priority));
+            }
+            if (issuedBy != null && !issuedBy.isEmpty()) {
+                spec = spec.and((root, query, cb) -> cb.equal(root.get("issuedBy"), issuedBy));
+            }
+            if (acteTraitement != null && !acteTraitement.isEmpty()) {
+                // Use path traversal for the foreign key rather than trying to load the full entity
+                spec = spec.and((root, query, cb) -> cb.equal(root.get("acteTraitement").get("idacte"), acteTraitement));
+            }
+            
+            return ticketRepository.findAll(spec);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Collections.emptyList();
+        }
+    }
     
-    if (status != null) {
-        spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), status));
+    @Override
+    public List<Ticket> searchTickets(Ticket.Status status, Ticket.Priority priority, String issuedBy, 
+                                     String acteTraitement, CaseType type, CaseType step, String subStatus) {
+        try {
+            Specification<Ticket> spec = Specification.where(null);
+            
+            if (status != null) {
+                spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), status));
+            }
+            if (priority != null) {
+                spec = spec.and((root, query, cb) -> cb.equal(root.get("priority"), priority));
+            }
+            if (issuedBy != null && !issuedBy.isEmpty()) {
+                spec = spec.and((root, query, cb) -> cb.equal(root.get("issuedBy"), issuedBy));
+            }
+            if (acteTraitement != null && !acteTraitement.isEmpty()) {
+                // Use path traversal for the foreign key rather than trying to load the full entity
+                spec = spec.and((root, query, cb) -> cb.equal(root.get("acteTraitement").get("idacte"), acteTraitement));
+            }
+            if (type != null) {
+                spec = spec.and((root, query, cb) -> cb.equal(root.get("type"), type));
+            }
+            if (step != null) {
+                spec = spec.and((root, query, cb) -> cb.equal(root.get("step"), step));
+            }
+            if (subStatus != null && !subStatus.isEmpty()) {
+                spec = spec.and((root, query, cb) -> cb.equal(root.get("subStatus"), subStatus));
+            }
+            
+            return ticketRepository.findAll(spec);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Collections.emptyList();
+        }
     }
-    if (priority != null) {
-        spec = spec.and((root, query, cb) -> cb.equal(root.get("priority"), priority));
-    }
-    if (issuedBy != null && !issuedBy.isEmpty()) {
-        spec = spec.and((root, query, cb) -> cb.equal(root.get("issuedBy"), issuedBy));
-    }
-    if (acteTraitement != null && !acteTraitement.isEmpty()) {
-        spec = spec.and((root, query, cb) -> cb.equal(root.get("acteTraitement"), acteTraitement));
-    }
-    
-    // If no filter is provided, spec will be null and findAll(spec) returns all records.
-    return ticketRepository.findAll(spec);
-}
 
     @Override
     public Ticket updateTicketStatus(UUID ticketId, Ticket.Status status) throws EntityCreationException {
@@ -85,31 +246,63 @@ public List<Ticket> getAllTickets(Ticket.Status status, Ticket.Priority priority
         if (ticket == null) {
             throw new EntityCreationException("Ticket", "Ticket not found");
         }
-    
-    // Update only if provided fields are not null or empty (ignore acteTraitement)
-    if (ticketRequest.getSubject() != null && !ticketRequest.getSubject().trim().isEmpty()) {
-        ticket.setSubject(ticketRequest.getSubject());
-    }
-    if (ticketRequest.getDescription() != null && !ticketRequest.getDescription().trim().isEmpty()) {
-        ticket.setDescription(ticketRequest.getDescription());
-    }
-    if (ticketRequest.getPriority() != null) {
-        ticket.setPriority(ticketRequest.getPriority());
-    }
-    if (ticketRequest.getStatus() != null) {
-        ticket.setStatus(ticketRequest.getStatus());
-    }
-    if (ticketRequest.getIssuedBy() != null && !ticketRequest.getIssuedBy().trim().isEmpty()) {
-        ticket.setIssuedBy(ticketRequest.getIssuedBy());
-    }
+        
+        // Validate type-step combination if both are being updated
+        if (ticketRequest.getType() != null && ticketRequest.getStep() != null) {
+            if (!isValidTypeStepCombination(ticketRequest.getType(), ticketRequest.getStep())) {
+                throw new EntityCreationException("Ticket", "Invalid type-step combination: " + 
+                    ticketRequest.getType() + " cannot have step " + ticketRequest.getStep());
+            }
+        } else if (ticketRequest.getType() != null && ticket.getStep() != null) {
+            // Type is being updated but step remains the same
+            if (!isValidTypeStepCombination(ticketRequest.getType(), ticket.getStep())) {
+                throw new EntityCreationException("Ticket", "Invalid type-step combination: " + 
+                    ticketRequest.getType() + " cannot have step " + ticket.getStep());
+            }
+        } else if (ticket.getType() != null && ticketRequest.getStep() != null) {
+            // Step is being updated but type remains the same
+            if (!isValidTypeStepCombination(ticket.getType(), ticketRequest.getStep())) {
+                throw new EntityCreationException("Ticket", "Invalid type-step combination: " + 
+                    ticket.getType() + " cannot have step " + ticketRequest.getStep());
+            }
+        }
+        
+        // Update only if provided fields are not null or empty
+        if (ticketRequest.getSubject() != null && !ticketRequest.getSubject().trim().isEmpty()) {
+            ticket.setSubject(ticketRequest.getSubject());
+        }
+        if (ticketRequest.getDescription() != null && !ticketRequest.getDescription().trim().isEmpty()) {
+            ticket.setDescription(ticketRequest.getDescription());
+        }
+        if (ticketRequest.getType() != null) {
+            ticket.setType(ticketRequest.getType());
+        }
+        if (ticketRequest.getStep() != null) {
+            ticket.setStep(ticketRequest.getStep());
+        }
+        if (ticketRequest.getSubStatus() != null) {
+            ticket.setSubStatus(ticketRequest.getSubStatus());
+        }
+        if (ticketRequest.getPriority() != null) {
+            ticket.setPriority(ticketRequest.getPriority());
+        }
+        if (ticketRequest.getStatus() != null) {
+            ticket.setStatus(ticketRequest.getStatus());
+        }
+        if (ticketRequest.getIssuedBy() != null && !ticketRequest.getIssuedBy().trim().isEmpty()) {
+            ticket.setIssuedBy(ticketRequest.getIssuedBy());
+        }
 
-    // Note: We intentionally do not update acteTraitement.
-    
-    // Update the modification timestamp
-    ticket.setUpdatedAt(LocalDateTime.now());
-    
-    return saveTicket(ticket);
-}
+        // Recalculate SLAs if type, step, or priority has changed
+        if ((ticketRequest.getType() != null || ticketRequest.getStep() != null || ticketRequest.getPriority() != null) 
+            && ticket.getType() != null && ticket.getStep() != null && ticket.getPriority() != null) {
+            ticket.setResponseSla(calculateResponseSLA(ticket.getType(), ticket.getStep(), ticket.getPriority()));
+            ticket.setResolutionSla(calculateResolutionSLA(ticket.getType(), ticket.getStep(), ticket.getPriority()));
+        }
+        
+        ticket.setUpdatedAt(LocalDateTime.now());
+        return saveTicket(ticket);
+    }
 
     @Override
     public void deleteTicket(UUID ticketId) throws EntityCreationException {
@@ -130,23 +323,243 @@ public List<Ticket> getAllTickets(Ticket.Status status, Ticket.Priority priority
 
     @Override
     public List<TicketCount> getTicketCountByStatus() {
-        // Use the Criteria API to produce a query equivalent to the removed repository query.
-        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
-        // Create a query returning TicketCount
-        CriteriaQuery<TicketCount> query = cb.createQuery(TicketCount.class);
-        Root<Ticket> root = query.from(Ticket.class);
-        
-        // Build query that constructs new TicketCount objects with the status and count.
-        query.select(
-                cb.construct(
-                        TicketCount.class, 
-                        root.get("status"), 
-                        cb.count(root)
-                )
-        )
-        .groupBy(root.get("status"));
-        
-        return entityManager.createQuery(query).getResultList();
+        try {
+            CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+            CriteriaQuery<Object[]> query = cb.createQuery(Object[].class);
+            Root<Ticket> root = query.from(Ticket.class);
+            
+            query.multiselect(
+                    root.get("status"),
+                    cb.count(root)
+            )
+            .groupBy(root.get("status"));
+            
+            List<Object[]> results = entityManager.createQuery(query).getResultList();
+            
+            return results.stream()
+                    .map(result -> new TicketCount(result[0], ((Number) result[1]).longValue()))
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            // Log error and return empty result rather than throwing exception
+            e.printStackTrace();
+            return Arrays.stream(Ticket.Status.values())
+                    .map(status -> new TicketCount(status, 0L))
+                    .collect(Collectors.toList());
+        }
     }
     
+    @Override
+    public List<TicketCount> getTicketCountByType() {
+        try {
+            CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+            CriteriaQuery<Object[]> query = cb.createQuery(Object[].class);
+            Root<Ticket> root = query.from(Ticket.class);
+            
+            query.multiselect(
+                    root.get("type"),
+                    cb.count(root)
+            )
+            .groupBy(root.get("type"));
+            
+            List<Object[]> results = entityManager.createQuery(query).getResultList();
+            
+            return results.stream()
+                    .map(result -> new TicketCount(result[0], ((Number) result[1]).longValue()))
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            // Log error and return empty result
+            e.printStackTrace();
+            return Collections.emptyList();
+        }
+    }
+    
+    @Override
+    public List<TicketCount> getTicketCountByStep() {
+        try {
+            CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+            CriteriaQuery<Object[]> query = cb.createQuery(Object[].class);
+            Root<Ticket> root = query.from(Ticket.class);
+            
+            query.multiselect(
+                    root.get("step"),
+                    cb.count(root)
+            )
+            .groupBy(root.get("step"));
+            
+            List<Object[]> results = entityManager.createQuery(query).getResultList();
+            
+            return results.stream()
+                    .map(result -> new TicketCount(result[0], ((Number) result[1]).longValue()))
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            // Log error and return empty result
+            e.printStackTrace();
+            return Collections.emptyList();
+        }
+    }
+    
+    @Override
+    public List<TicketCount> getTicketCountBySubStatus() {
+        try {
+            CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+            CriteriaQuery<Object[]> query = cb.createQuery(Object[].class);
+            Root<Ticket> root = query.from(Ticket.class);
+            
+            query.multiselect(
+                    root.get("subStatus"),
+                    cb.count(root)
+            )
+            .groupBy(root.get("subStatus"));
+            
+            List<Object[]> results = entityManager.createQuery(query).getResultList();
+            
+            return results.stream()
+                    .map(result -> new TicketCount(result[0], ((Number) result[1]).longValue()))
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            // Log error and return empty result
+            e.printStackTrace();
+            return Collections.emptyList();
+        }
+    }
+    
+    @Override
+    public Map<String, Long> getTicketStatsByPeriod(String period) {
+        Map<String, Long> stats = new HashMap<>();
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Object[]> query = cb.createQuery(Object[].class);
+        Root<Ticket> root = query.from(Ticket.class);
+        
+        LocalDateTime startDate;
+        LocalDateTime now = LocalDateTime.now();
+        
+        switch (period.toLowerCase()) {
+            case "daily":
+                startDate = now.truncatedTo(ChronoUnit.DAYS);
+                break;
+            case "weekly":
+                startDate = now.minusWeeks(1);
+                break;
+            case "monthly":
+                startDate = now.minusMonths(1);
+                break;
+            case "quarterly":
+                startDate = now.minusMonths(3);
+                break;
+            case "yearly":
+                startDate = now.minusYears(1);
+                break;
+            default:
+                startDate = now.minusDays(7); // Default to weekly
+        }
+        
+        // Total tickets created in period
+        query.select(cb.array(cb.literal("created"), cb.count(root)))
+             .where(cb.greaterThanOrEqualTo(root.get("createdAt"), startDate));
+        Object[] created = entityManager.createQuery(query).getSingleResult();
+        stats.put("created", (Long) created[1]);
+        
+        // Total tickets resolved in period
+        query = cb.createQuery(Object[].class);
+        root = query.from(Ticket.class);
+        query.select(cb.array(cb.literal("resolved"), cb.count(root)))
+             .where(
+                 cb.and(
+                     cb.equal(root.get("status"), Ticket.Status.RESOLVED),
+                     cb.greaterThanOrEqualTo(root.get("updatedAt"), startDate)
+                 )
+             );
+        Object[] resolved = entityManager.createQuery(query).getSingleResult();
+        stats.put("resolved", (Long) resolved[1]);
+        
+        // Total tickets by type
+        for (CaseType type : CaseType.values()) {
+            query = cb.createQuery(Object[].class);
+            root = query.from(Ticket.class);
+            query.select(cb.array(cb.literal(type.name()), cb.count(root)))
+                 .where(
+                     cb.and(
+                         cb.equal(root.get("type"), type),
+                         cb.greaterThanOrEqualTo(root.get("createdAt"), startDate)
+                     )
+                 );
+            try {
+                Object[] typeCount = entityManager.createQuery(query).getSingleResult();
+                stats.put("type_" + type.name(), (Long) typeCount[1]);
+            } catch (Exception e) {
+                stats.put("type_" + type.name(), 0L);
+            }
+        }
+        
+        return stats;
+    }
+    
+    @Override
+    public Duration calculateResponseSLA(CaseType type, CaseType step, Ticket.Priority priority) {
+        if (type == null || step == null || priority == null) {
+            return Duration.ofHours(24); // Default fallback
+        }
+        
+        String key = type.name() + ":" + step.name() + ":" + priority.name();
+        if (RESPONSE_SLA_CONFIGS.containsKey(key)) {
+            return RESPONSE_SLA_CONFIGS.get(key);
+        }
+        
+        // Try fallback to type:priority
+        key = type.name() + ":" + priority.name();
+        if (RESPONSE_SLA_CONFIGS.containsKey(key)) {
+            return RESPONSE_SLA_CONFIGS.get(key);
+        }
+        
+        // Default based only on priority
+        key = "DEFAULT:" + priority.name();
+        return RESPONSE_SLA_CONFIGS.getOrDefault(key, Duration.ofHours(24));
+    }
+    
+    @Override
+    public Duration calculateResolutionSLA(CaseType type, CaseType step, Ticket.Priority priority) {
+        if (type == null || step == null || priority == null) {
+            return Duration.ofDays(5); // Default fallback
+        }
+        
+        String key = type.name() + ":" + step.name() + ":" + priority.name();
+        if (RESOLUTION_SLA_CONFIGS.containsKey(key)) {
+            return RESOLUTION_SLA_CONFIGS.get(key);
+        }
+        
+        // Try fallback to type:priority
+        key = type.name() + ":" + priority.name();
+        if (RESOLUTION_SLA_CONFIGS.containsKey(key)) {
+            return RESOLUTION_SLA_CONFIGS.get(key);
+        }
+        
+        // Default based only on priority
+        key = "DEFAULT:" + priority.name();
+        return RESOLUTION_SLA_CONFIGS.getOrDefault(key, Duration.ofDays(5));
+    }
+    
+    @Override
+    public boolean isValidTypeStepCombination(CaseType type, CaseType step) {
+        if (type == null || step == null) {
+            return false;
+        }
+        
+        List<CaseType> validSteps = VALID_TYPE_STEP_MAPPINGS.get(type);
+        
+        // If we don't have explicit mappings for this type, allow any step
+        if (validSteps == null) {
+            return true;
+        }
+        
+        return validSteps.contains(step);
+    }
+    
+    @Override
+    public List<CaseType> getValidStepsForType(CaseType type) {
+        if (type == null) {
+            return Collections.emptyList();
+        }
+        
+        return VALID_TYPE_STEP_MAPPINGS.getOrDefault(type, Collections.emptyList());
+    }
 }

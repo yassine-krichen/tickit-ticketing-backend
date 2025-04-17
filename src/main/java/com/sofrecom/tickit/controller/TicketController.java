@@ -6,8 +6,16 @@ import com.sofrecom.tickit.dto.TicketResponse;
 import com.sofrecom.tickit.dto.TicketUpdateDTO;
 import com.sofrecom.tickit.exception.EntityCreationException;
 import com.sofrecom.tickit.mapper.TicketMapper;
+import com.sofrecom.tickit.model.CaseType;
 import com.sofrecom.tickit.model.Ticket;
 import com.sofrecom.tickit.service.TicketService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,19 +23,34 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/tickets")
 @RequiredArgsConstructor
+@Tag(name = "Ticket Management", description = "APIs for ticket operations in the ticketing system")
 public class TicketController {
 
     private final TicketService ticketService;
     private final TicketMapper ticketMapper;
 
+    @Operation(summary = "Create a new ticket", 
+               description = "Creates a new ticket in the system based on the provided details")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", 
+                    description = "Ticket created successfully",
+                    content = @Content(schema = @Schema(implementation = TicketResponse.class))),
+        @ApiResponse(responseCode = "400", 
+                    description = "Invalid input data",
+                    content = @Content(schema = @Schema(implementation = TicketResponse.class)))
+    })
     @PostMapping
-    public ResponseEntity<TicketResponse> createTicket(@Valid @RequestBody TicketRequest request) {
+    public ResponseEntity<TicketResponse> createTicket(
+            @Parameter(description = "Ticket details to create", required = true) 
+            @Valid @RequestBody TicketRequest request) {
         try {
             Ticket ticket = ticketMapper.toEntity(request);
             Ticket createdTicket = ticketService.createTicket(ticket);
@@ -45,8 +68,19 @@ public class TicketController {
         }
     }
 
+    @Operation(summary = "Get ticket by ID", 
+               description = "Returns a ticket based on its unique identifier")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", 
+                    description = "Ticket found",
+                    content = @Content(schema = @Schema(implementation = TicketResponse.class))),
+        @ApiResponse(responseCode = "404", 
+                    description = "Ticket not found")
+    })
     @GetMapping("/{ticketId}")
-    public ResponseEntity<TicketResponse> getTicketById(@PathVariable UUID ticketId) {
+    public ResponseEntity<TicketResponse> getTicketById(
+            @Parameter(description = "Unique identifier of the ticket", required = true) 
+            @PathVariable UUID ticketId) {
         Ticket ticket = ticketService.getTicketById(ticketId);
         if (ticket == null) {
             return ResponseEntity.notFound().build();
@@ -55,30 +89,157 @@ public class TicketController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(summary = "Get all tickets", 
+               description = "Returns all tickets with optional filtering by status, priority, issuer, or acte traitement")
+    @ApiResponse(responseCode = "200", 
+                description = "List of tickets matching the filter criteria",
+                content = @Content(schema = @Schema(implementation = TicketResponse.class)))
     @GetMapping
-public ResponseEntity<List<TicketResponse>> getAllTickets(
-        @RequestParam(name = "status", required = false) Ticket.Status status,
-        @RequestParam(name = "priority", required = false) Ticket.Priority priority,
-        @RequestParam(name = "issuedBy", required = false) String issuedBy,
-        @RequestParam(name = "acteTraitement", required = false) String acteTraitement) {
-    
-    List<Ticket> tickets = ticketService.getAllTickets(status, priority, issuedBy, acteTraitement);
-    List<TicketResponse> responses = tickets.stream()
-            .map(ticketMapper::toResponse)
-            .collect(Collectors.toList());
-    return ResponseEntity.ok(responses);
-}
+    public ResponseEntity<List<TicketResponse>> getAllTickets(
+            @Parameter(description = "Filter by ticket status") 
+            @RequestParam(name = "status", required = false) Ticket.Status status,
+            @Parameter(description = "Filter by ticket priority") 
+            @RequestParam(name = "priority", required = false) Ticket.Priority priority,
+            @Parameter(description = "Filter by user who issued the ticket") 
+            @RequestParam(name = "issuedBy", required = false) String issuedBy,
+            @Parameter(description = "Filter by associated acte traitement ID") 
+            @RequestParam(name = "acteTraitement", required = false) String acteTraitement) {
+        
+        List<Ticket> tickets = ticketService.getAllTickets(status, priority, issuedBy, acteTraitement);
+        List<TicketResponse> responses = tickets.stream()
+                .map(ticketMapper::toResponse)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(responses);
+    }
 
+    @Operation(summary = "Search tickets with enhanced filters", 
+               description = "Search tickets by various criteria including type, step, and sub-status")
+    @ApiResponse(responseCode = "200", 
+                description = "List of tickets matching the search criteria",
+                content = @Content(schema = @Schema(implementation = TicketResponse.class)))
+    @GetMapping("/search")
+    public ResponseEntity<List<TicketResponse>> searchTickets(
+            @Parameter(description = "Filter by ticket status") 
+            @RequestParam(name = "status", required = false) Ticket.Status status,
+            @Parameter(description = "Filter by ticket priority") 
+            @RequestParam(name = "priority", required = false) Ticket.Priority priority,
+            @Parameter(description = "Filter by user who issued the ticket") 
+            @RequestParam(name = "issuedBy", required = false) String issuedBy,
+            @Parameter(description = "Filter by associated acte traitement ID") 
+            @RequestParam(name = "acteTraitement", required = false) String acteTraitement,
+            @Parameter(description = "Filter by case type") 
+            @RequestParam(name = "type", required = false) CaseType type,
+            @Parameter(description = "Filter by case step") 
+            @RequestParam(name = "step", required = false) CaseType step,
+            @Parameter(description = "Filter by sub-status") 
+            @RequestParam(name = "subStatus", required = false) String subStatus) {
+        
+        List<Ticket> tickets = ticketService.searchTickets(status, priority, issuedBy, acteTraitement, type, step, subStatus);
+        List<TicketResponse> responses = tickets.stream()
+                .map(ticketMapper::toResponse)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(responses);
+    }
+
+    @Operation(summary = "Get ticket counts by status", 
+               description = "Returns ticket counts grouped by their status")
+    @ApiResponse(responseCode = "200", 
+                description = "Ticket counts by status",
+                content = @Content(schema = @Schema(implementation = TicketCount.class)))
     @GetMapping("/counts-by-status")
     public ResponseEntity<List<TicketCount>> getTicketCountByStatus() {
         List<TicketCount> counts = ticketService.getTicketCountByStatus();
         return ResponseEntity.ok(counts);
     }
+    
+    @Operation(summary = "Get ticket counts by type", 
+               description = "Returns ticket counts grouped by their type")
+    @ApiResponse(responseCode = "200", 
+                description = "Ticket counts by type",
+                content = @Content(schema = @Schema(implementation = TicketCount.class)))
+    @GetMapping("/counts-by-type")
+    public ResponseEntity<List<TicketCount>> getTicketCountByType() {
+        List<TicketCount> counts = ticketService.getTicketCountByType();
+        return ResponseEntity.ok(counts);
+    }
+    
+    @Operation(summary = "Get ticket counts by step", 
+               description = "Returns ticket counts grouped by their step")
+    @ApiResponse(responseCode = "200", 
+                description = "Ticket counts by step",
+                content = @Content(schema = @Schema(implementation = TicketCount.class)))
+    @GetMapping("/counts-by-step")
+    public ResponseEntity<List<TicketCount>> getTicketCountByStep() {
+        List<TicketCount> counts = ticketService.getTicketCountByStep();
+        return ResponseEntity.ok(counts);
+    }
+    
+    @Operation(summary = "Get ticket counts by sub-status", 
+               description = "Returns ticket counts grouped by their sub-status")
+    @ApiResponse(responseCode = "200", 
+                description = "Ticket counts by sub-status",
+                content = @Content(schema = @Schema(implementation = TicketCount.class)))
+    @GetMapping("/counts-by-sub-status")
+    public ResponseEntity<List<TicketCount>> getTicketCountBySubStatus() {
+        List<TicketCount> counts = ticketService.getTicketCountBySubStatus();
+        return ResponseEntity.ok(counts);
+    }
+    
+    @Operation(summary = "Get ticket statistics by period", 
+               description = "Returns ticket statistics for a specific period (daily, weekly, monthly, quarterly, yearly)")
+    @ApiResponse(responseCode = "200", 
+                description = "Ticket statistics for the specified period")
+    @GetMapping("/stats/{period}")
+    public ResponseEntity<Map<String, Long>> getTicketStatsByPeriod(
+            @Parameter(description = "Period for statistics (daily, weekly, monthly, quarterly, yearly)", required = true) 
+            @PathVariable String period) {
+        Map<String, Long> stats = ticketService.getTicketStatsByPeriod(period);
+        return ResponseEntity.ok(stats);
+    }
+    
+    @Operation(summary = "Validate type-step combination", 
+               description = "Checks if a given case type and step combination is valid")
+    @ApiResponse(responseCode = "200", 
+                description = "Validation result")
+    @GetMapping("/validate-type-step")
+    public ResponseEntity<Boolean> validateTypeStepCombination(
+            @Parameter(description = "Case type", required = true) 
+            @RequestParam CaseType type,
+            @Parameter(description = "Case step", required = true) 
+            @RequestParam CaseType step) {
+        boolean isValid = ticketService.isValidTypeStepCombination(type, step);
+        return ResponseEntity.ok(isValid);
+    }
+    
+    @Operation(summary = "Get valid steps for type", 
+               description = "Returns all valid steps for a given case type")
+    @ApiResponse(responseCode = "200", 
+                description = "List of valid steps for the specified type")
+    @GetMapping("/valid-steps/{type}")
+    public ResponseEntity<List<CaseType>> getValidStepsForType(
+            @Parameter(description = "Case type", required = true) 
+            @PathVariable CaseType type) {
+        List<CaseType> validSteps = ticketService.getValidStepsForType(type);
+        return ResponseEntity.ok(validSteps);
+    }
    
-
+    @Operation(summary = "Update ticket status", 
+               description = "Updates the status of an existing ticket")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", 
+                    description = "Ticket status updated successfully",
+                    content = @Content(schema = @Schema(implementation = TicketResponse.class))),
+        @ApiResponse(responseCode = "400", 
+                    description = "Invalid status update request",
+                    content = @Content(schema = @Schema(implementation = TicketResponse.class))),
+        @ApiResponse(responseCode = "404", 
+                    description = "Ticket not found")
+    })
     @PutMapping("/{ticketId}/status")
     public ResponseEntity<TicketResponse> updateTicketStatus( 
+            @Parameter(description = "Unique identifier of the ticket", required = true) 
             @PathVariable UUID ticketId, 
+            @Parameter(description = "New status value", required = true) 
             @RequestParam Ticket.Status status) {
         try {
             Ticket updatedTicket = ticketService.updateTicketStatus(ticketId, status);
@@ -95,9 +256,23 @@ public ResponseEntity<List<TicketResponse>> getAllTickets(
         }
     }
 
+    @Operation(summary = "Update ticket", 
+               description = "Updates the details of an existing ticket")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", 
+                    description = "Ticket updated successfully",
+                    content = @Content(schema = @Schema(implementation = TicketResponse.class))),
+        @ApiResponse(responseCode = "400", 
+                    description = "Invalid update request",
+                    content = @Content(schema = @Schema(implementation = TicketResponse.class))),
+        @ApiResponse(responseCode = "404", 
+                    description = "Ticket not found")
+    })
     @PutMapping("/{ticketId}")
     public ResponseEntity<TicketResponse> updateTicket(
+            @Parameter(description = "Unique identifier of the ticket", required = true) 
             @PathVariable UUID ticketId, 
+            @Parameter(description = "Updated ticket details", required = true) 
             @Valid @RequestBody TicketUpdateDTO request) {
         try {
             Ticket updatedTicket = ticketService.updateTicket(ticketId, request);
@@ -114,8 +289,22 @@ public ResponseEntity<List<TicketResponse>> getAllTickets(
         }
     }
 
+    @Operation(summary = "Delete a ticket", 
+               description = "Deletes a ticket by its ID")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", 
+                    description = "Ticket deleted successfully",
+                    content = @Content(schema = @Schema(type = "string"))),
+        @ApiResponse(responseCode = "400", 
+                    description = "Error deleting ticket",
+                    content = @Content(schema = @Schema(type = "string"))),
+        @ApiResponse(responseCode = "404", 
+                    description = "Ticket not found")
+    })
     @DeleteMapping("/{ticketId}")
-    public ResponseEntity<String> deleteTicket(@PathVariable UUID ticketId) {
+    public ResponseEntity<String> deleteTicket(
+            @Parameter(description = "Unique identifier of the ticket to delete", required = true) 
+            @PathVariable UUID ticketId) {
         try {
             ticketService.deleteTicket(ticketId);
             return ResponseEntity.ok("Ticket deleted successfully");
@@ -124,6 +313,23 @@ public ResponseEntity<List<TicketResponse>> getAllTickets(
         }
     }
 
-
-    
+    @Operation(summary = "Get all ticket statistics", 
+               description = "Returns all ticket statistics including counts by status, type, step, and sub-status")
+    @ApiResponse(responseCode = "200", 
+                description = "All ticket statistics")
+    @GetMapping("/stats/all")
+    public ResponseEntity<Map<String, Object>> getAllTicketStats() {
+        Map<String, Object> allStats = new HashMap<>();
+        
+        // Get all statistics
+        allStats.put("countsByStatus", ticketService.getTicketCountByStatus());
+        allStats.put("countsByType", ticketService.getTicketCountByType());
+        allStats.put("countsByStep", ticketService.getTicketCountByStep());
+        allStats.put("countsBySubStatus", ticketService.getTicketCountBySubStatus());
+        
+        // Add raw counts for debugging
+        allStats.put("totalTickets", ticketService.getAllTickets(null, null, null, null).size());
+        
+        return ResponseEntity.ok(allStats);
+    }
 }
