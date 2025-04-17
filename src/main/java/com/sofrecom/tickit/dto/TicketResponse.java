@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -29,6 +30,8 @@ public class TicketResponse {
     private String issuedBy;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private Duration responseSla;
+    private Duration resolutionSla;
 
     // Additional fields for friendly response
     private String statusMessage;
