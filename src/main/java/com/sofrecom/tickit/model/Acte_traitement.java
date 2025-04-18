@@ -92,7 +92,7 @@ public class Acte_traitement {
     /**
      * The case this treatment act belongs to.
      */
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER) // Changed to EAGER loading
     @JoinColumn(name = "case_id")
     private Case associatedCase;
 

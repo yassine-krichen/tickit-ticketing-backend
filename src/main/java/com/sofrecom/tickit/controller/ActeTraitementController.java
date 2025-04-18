@@ -3,6 +3,7 @@ package com.sofrecom.tickit.controller;
 import com.sofrecom.tickit.dto.ActeTraitementRequest;
 import com.sofrecom.tickit.dto.ActeTraitementResponse;
 import com.sofrecom.tickit.dto.ActeTraitementUpdateRequest;
+import com.sofrecom.tickit.dto.PopulatedTreatmentActResponse;
 import com.sofrecom.tickit.service.ActeTraitementService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -12,7 +13,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -202,5 +202,29 @@ public class ActeTraitementController {
             @PathVariable String id) {
         acteTraitementService.deleteActeTraitement(id);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Retrieve a treatment act by its ID with populated case and prestation data.
+     * GET /api/acte-traitements/{id}/populated
+     *
+     * @param id Treatment act ID
+     * @return ResponseEntity containing the found treatment act with populated data
+     */
+    @Operation(summary = "Get populated treatment act by ID", 
+               description = "Returns a treatment act with detailed case and prestation information")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", 
+                    description = "Treatment act found with populated data",
+                    content = @Content(schema = @Schema(implementation = PopulatedTreatmentActResponse.class))),
+        @ApiResponse(responseCode = "404", 
+                    description = "Treatment act not found")
+    })
+    @GetMapping("/{id}/populated")
+    public ResponseEntity<PopulatedTreatmentActResponse> getPopulatedActeTraitement(
+            @Parameter(description = "Unique identifier of the treatment act", required = true)
+            @PathVariable String id) {
+        PopulatedTreatmentActResponse acteTraitement = acteTraitementService.getPopulatedActeTraitementById(id);
+        return ResponseEntity.ok(acteTraitement);
     }
 }

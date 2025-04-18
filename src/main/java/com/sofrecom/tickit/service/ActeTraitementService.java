@@ -3,6 +3,7 @@ package com.sofrecom.tickit.service;
 import com.sofrecom.tickit.dto.ActeTraitementRequest;
 import com.sofrecom.tickit.dto.ActeTraitementResponse;
 import com.sofrecom.tickit.dto.ActeTraitementUpdateRequest;
+import com.sofrecom.tickit.dto.PopulatedTreatmentActResponse;
 
 import java.util.List;
 import java.util.UUID;
@@ -71,4 +72,12 @@ public interface ActeTraitementService {
      * @return Number of treatment acts
      */
     int getNumberOfStepsByCaseId(UUID caseId);
+    
+    /**
+     * Get a treatment act by ID with populated case and prestation data.
+     * 
+     * @param id The treatment act ID
+     * @return A populated treatment act response with detailed case and prestation information
+     */
+    PopulatedTreatmentActResponse getPopulatedActeTraitementById(String id);
 }

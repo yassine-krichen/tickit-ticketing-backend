@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.sofrecom.tickit.dto.ActeTraitementRequest;
 import com.sofrecom.tickit.dto.ActeTraitementResponse;
 import com.sofrecom.tickit.dto.ActeTraitementUpdateRequest;
+import com.sofrecom.tickit.dto.PopulatedTreatmentActResponse;
 import com.sofrecom.tickit.exception.ResourceNotFoundException;
 import com.sofrecom.tickit.model.*;
 import com.sofrecom.tickit.repository.ActeTraitementRepository;
@@ -93,6 +94,41 @@ public class ActeTraitementServiceImpl implements ActeTraitementService {
         Acte_traitement acteTraitement = acteTraitementRepository.findActiveById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Treatment act", "Id", id));
         return mapToResponse(acteTraitement);
+    }
+
+    /**
+     * Get a treatment act by ID with populated case and prestation data.
+     * 
+     * @param id The treatment act ID
+     * @return A populated treatment act response with detailed case and prestation information
+     */
+    @Override
+    public PopulatedTreatmentActResponse getPopulatedActeTraitementById(String id) {
+        // Get the basic treatment act first
+        Acte_traitement acteTraitement = acteTraitementRepository.findActiveById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Treatment act", "Id", id));
+        
+        // Create the base response
+        ActeTraitementResponse baseResponse = mapToResponse(acteTraitement);
+        
+        // Create the populated response and extend it with additional data
+        PopulatedTreatmentActResponse populatedResponse = PopulatedTreatmentActResponse.fromBaseResponse(baseResponse);
+        
+        // Populate case information if available
+        Case associatedCase = acteTraitement.getAssociatedCase();
+        if (associatedCase != null) {
+            populatedResponse.setCaseName(associatedCase.getName());
+            populatedResponse.setCaseStatus(associatedCase.getStatus().toString());
+            populatedResponse.setCaseType(associatedCase.getType().getValue());
+            populatedResponse.setCasePriority(associatedCase.getPriority().toString());
+        }
+        
+        // Populate prestation information if available
+        if (acteTraitement.getType_prestation() != null) {
+            populatedResponse.setPrestationName(acteTraitement.getType_prestation().getNomPrestation());
+        }
+        
+        return populatedResponse;
     }
 
     /**
