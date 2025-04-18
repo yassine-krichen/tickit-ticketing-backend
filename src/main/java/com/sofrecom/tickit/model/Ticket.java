@@ -28,6 +28,9 @@ import javax.persistence.ManyToOne;
 import javax.persistence.JoinColumn;
 import javax.persistence.FetchType;
 
+/**
+ * Represents a support ticket in the system.
+ */
 @Entity
 @Table(name = "ticket", indexes = {
         @Index(name = "idx_ticket_priority", columnList = "priority"),

@@ -5,12 +5,16 @@ import com.sofrecom.tickit.model.CaseType;
 import com.sofrecom.tickit.dto.TicketCount;
 import com.sofrecom.tickit.dto.TicketUpdateDTO;
 import com.sofrecom.tickit.exception.EntityCreationException;
+import org.springframework.data.domain.Page;
 
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Service interface for managing Tickets.
+ */
 public interface TicketService {
 
     Ticket createTicket(Ticket ticket) throws EntityCreationException;
@@ -50,4 +54,27 @@ public interface TicketService {
     
     // Get valid steps for a given type
     List<CaseType> getValidStepsForType(CaseType type);
+
+    /**
+     * Retrieves a paginated and filtered list of tickets.
+     *
+     * @param page       The page number (0-based).
+     * @param size       The number of items per page.
+     * @param sortField  The field to sort by (e.g., "createdAt", "subject", "priority", "status").
+     * @param sortDir    The sort direction ("asc" or "desc").
+     * @param q          Optional free-text search query for subject/description.
+     * @param status     Optional filter by ticket status.
+     * @param priority   Optional filter by ticket priority.
+     * @return A Page containing the requested Ticket entities.
+     * @throws com.sofrecom.tickit.exception.InvalidSortParameterException if sortField or sortDir is invalid.
+     */
+    Page<Ticket> getTickets(
+            int page,
+            int size,
+            String sortField,
+            String sortDir,
+            String q,
+            Ticket.Status status,
+            Ticket.Priority priority
+    );
 }

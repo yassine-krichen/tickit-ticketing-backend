@@ -1,5 +1,6 @@
 package com.sofrecom.tickit.controller;
 
+import com.sofrecom.tickit.dto.PaginatedResponse;
 import com.sofrecom.tickit.dto.TicketCount;
 import com.sofrecom.tickit.dto.TicketRequest;
 import com.sofrecom.tickit.dto.TicketResponse;
@@ -9,6 +10,7 @@ import com.sofrecom.tickit.mapper.TicketMapper;
 import com.sofrecom.tickit.model.CaseType;
 import com.sofrecom.tickit.model.Ticket;
 import com.sofrecom.tickit.service.TicketService;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -16,9 +18,16 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
@@ -28,14 +37,84 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.HashMap;
 
+/**
+ * REST controller for managing Tickets.
+ */
 @RestController
-@RequestMapping("/tickets")
+@RequestMapping("/api/v1/tickets") // Updated base path
 @RequiredArgsConstructor
+@Validated // Enables validation of method parameters annotated with constraints
 @Tag(name = "Ticket Management", description = "APIs for ticket operations in the ticketing system")
 public class TicketController {
 
     private final TicketService ticketService;
     private final TicketMapper ticketMapper;
+
+    /**
+     * Retrieves a paginated list of tickets based on specified criteria.
+     *
+     * @param page      Page number (0-indexed).
+     * @param size      Number of items per page (1-100).
+     * @param sortField Field to sort by (timestamp, title, priority, status).
+     * @param sortDir   Sort direction (asc, desc).
+     * @param q         Optional search query for subject/description.
+     * @param status    Optional filter by ticket status.
+     * @param priority  Optional filter by ticket priority.
+     * @return A ResponseEntity containing the paginated list of tickets or an error response.
+     */
+    @Operation(summary = "Get paginated tickets",
+               description = "Returns a paginated list of tickets with filtering and sorting options.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200",
+                    description = "Successfully retrieved tickets",
+                    content = @Content(mediaType = "application/json",
+                                       schema = @Schema(implementation = PaginatedResponseTicketResponseSchema.class))), // Use wrapper schema
+        @ApiResponse(responseCode = "400",
+                    description = "Invalid input parameters (page, size, sortField, sortDir)",
+                    content = @Content(mediaType = "application/json",
+                                       schema = @Schema(implementation = com.sofrecom.tickit.dto.ErrorResponse.class))) // Reference ErrorResponse DTO
+    })
+    @GetMapping
+    public ResponseEntity<PaginatedResponse<TicketResponse>> getTickets(
+            @Parameter(description = "Page number (0-based)", example = "0")
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+
+            @Parameter(description = "Number of items per page", example = "20")
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
+
+            @Parameter(description = "Field to sort by. Allowed values: timestamp, title, priority, status", example = "timestamp")
+            @RequestParam(defaultValue = "timestamp")
+            // Basic pattern check, more specific validation in service
+            @Pattern(regexp = "^(timestamp|title|priority|status)$", message = "Invalid sort field. Allowed: timestamp, title, priority, status")
+            String sortField,
+
+            @Parameter(description = "Sort direction. Allowed values: asc, desc", example = "desc")
+            @RequestParam(defaultValue = "desc")
+            @Pattern(regexp = "^(asc|desc)$", message = "Invalid sort direction. Allowed: asc, desc")
+            String sortDir,
+
+            @Parameter(description = "Optional free-text search across subject and description", example = "database connection")
+            @RequestParam(required = false) String q,
+
+            @Parameter(description = "Optional filter by ticket status", example = "OPEN")
+            @RequestParam(required = false) Ticket.Status status,
+
+            @Parameter(description = "Optional filter by ticket priority", example = "HIGH")
+            @RequestParam(required = false) Ticket.Priority priority
+    ) {
+        // Service layer handles validation of sortField/sortDir logic and performs the query
+        Page<Ticket> ticketPage = ticketService.getTickets(page, size, sortField, sortDir, q, status, priority);
+
+        // Map Page<Ticket> to PaginatedResponse<TicketResponse>
+        PaginatedResponse<TicketResponse> response = ticketMapper.toPaginatedResponse(ticketPage);
+
+        return ResponseEntity.ok(response);
+    }
+
+    // --- Helper Schema Class for OpenAPI ---
+    // This is needed because OpenAPI annotations cannot directly reference generic types like PaginatedResponse<TicketResponse>.
+    @Schema(name = "PaginatedTicketResponse")
+    private static class PaginatedResponseTicketResponseSchema extends PaginatedResponse<TicketResponse> {}
 
     @Operation(summary = "Create a new ticket", 
                description = "Creates a new ticket in the system based on the provided details")
@@ -94,7 +173,7 @@ public class TicketController {
     @ApiResponse(responseCode = "200", 
                 description = "List of tickets matching the filter criteria",
                 content = @Content(schema = @Schema(implementation = TicketResponse.class)))
-    @GetMapping
+    @GetMapping("/all")
     public ResponseEntity<List<TicketResponse>> getAllTickets(
             @Parameter(description = "Filter by ticket status") 
             @RequestParam(name = "status", required = false) Ticket.Status status,

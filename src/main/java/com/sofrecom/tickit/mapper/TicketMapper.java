@@ -1,14 +1,21 @@
 package com.sofrecom.tickit.mapper;
 
-import org.springframework.stereotype.Component;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import com.sofrecom.tickit.dto.PaginatedResponse;
 import com.sofrecom.tickit.dto.TicketRequest;
 import com.sofrecom.tickit.dto.TicketResponse;
 import com.sofrecom.tickit.model.Ticket;
 import com.sofrecom.tickit.model.Acte_traitement;
+import org.springframework.data.domain.Page;
+import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
+/**
+ * Mapper component for converting between Ticket entity and DTOs.
+ */
 @Component
 public class TicketMapper {
     private static final Logger logger = LoggerFactory.getLogger(TicketMapper.class);
@@ -59,45 +66,45 @@ public class TicketMapper {
     }
 
     /**
-     * Converts a Ticket entity to a TicketResponse DTO.
+     * Maps a Ticket entity to a TicketResponse DTO.
      *
-     * @param ticket the Ticket entity.
-     * @return the TicketResponse DTO.
+     * @param ticket The Ticket entity.
+     * @return The corresponding TicketResponse DTO.
      */
     public TicketResponse toResponse(Ticket ticket) {
-        try {
-            logger.debug("Converting Ticket to TicketResponse");
-            
-            if (ticket == null) {
-                logger.error("Ticket is null");
-                throw new IllegalArgumentException("Ticket cannot be null");
-            }
-            
-            if (ticket.getActeTraitement() == null) {
-                logger.error("Ticket acteTraitement is null");
-                throw new IllegalArgumentException("Ticket.acteTraitement cannot be null");
-            }
-            
-            TicketResponse response = TicketResponse.builder()
-                    .id(ticket.getId())
-                    .acteTraitement(ticket.getActeTraitement().getIdacte())
-                    .subject(ticket.getSubject())
-                    .description(ticket.getDescription())
-                    .type(ticket.getType())
-                    .step(ticket.getStep())
-                    .subStatus(ticket.getSubStatus())
-                    .priority(ticket.getPriority())
-                    .status(ticket.getStatus())
-                    .issuedBy(ticket.getIssuedBy())
-                    .createdAt(ticket.getCreatedAt())
-                    .updatedAt(ticket.getUpdatedAt())
-                    .build();
-                    
-            logger.debug("Successfully mapped to TicketResponse: {}", response);
-            return response;
-        } catch (Exception e) {
-            logger.error("Error mapping Ticket to TicketResponse", e);
-            throw e;
+        if (ticket == null) {
+            return null;
         }
+        return TicketResponse.builder()
+                .id(ticket.getId())
+                .acteTraitement(ticket.getActeTraitement().getIdacte()) // Assuming toString() gives the desired representation
+                .subject(ticket.getSubject())
+                .description(ticket.getDescription())
+                .type(ticket.getType())
+                .step(ticket.getStep())
+                .subStatus(ticket.getSubStatus())
+                .priority(ticket.getPriority())
+                .status(ticket.getStatus())
+                .issuedBy(ticket.getIssuedBy())
+                .createdAt(ticket.getCreatedAt())
+                .updatedAt(ticket.getUpdatedAt())
+                .responseSla(ticket.getResponseSla())
+                .resolutionSla(ticket.getResolutionSla())
+                // statusMessage and message are typically set in the controller/service
+                .build();
+    }
+
+    /**
+     * Maps a Page of Ticket entities to a PaginatedResponse containing TicketResponse DTOs.
+     *
+     * @param ticketPage The Page<Ticket> object from the repository.
+     * @return A PaginatedResponse<TicketResponse>.
+     */
+    public PaginatedResponse<TicketResponse> toPaginatedResponse(Page<Ticket> ticketPage) {
+        List<TicketResponse> ticketResponses = ticketPage.getContent().stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+
+        return PaginatedResponse.fromPage(ticketPage, ticketResponses);
     }
 }
