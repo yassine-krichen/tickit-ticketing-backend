@@ -5,6 +5,7 @@ import com.sofrecom.tickit.model.TicketActivity.ActivityType;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.PagingAndSortingRepository;
@@ -15,7 +16,10 @@ import java.util.UUID;
 
 import javax.transaction.Transactional;
 
-public interface TicketActivityRepository extends PagingAndSortingRepository<TicketActivity, Long> {
+public interface TicketActivityRepository extends 
+        PagingAndSortingRepository<TicketActivity, Long>,
+        JpaSpecificationExecutor<TicketActivity> {
+    
     Optional<TicketActivity> findByIdAndTicket_Id(Long id, UUID ticketId);
 
     Page<TicketActivity> findByTicket_Id(UUID ticketId, Pageable pageable);

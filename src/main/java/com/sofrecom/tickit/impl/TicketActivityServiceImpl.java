@@ -1,15 +1,20 @@
 package com.sofrecom.tickit.impl;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import com.sofrecom.tickit.dto.TicketActivityRequest;
 import com.sofrecom.tickit.dto.TicketActivityResponse;
+import com.sofrecom.tickit.exception.InvalidSortParameterException;
 import com.sofrecom.tickit.model.Ticket;
 import com.sofrecom.tickit.model.TicketActivity;
 import com.sofrecom.tickit.model.TicketActivity.ActivityType;
 import com.sofrecom.tickit.repository.TicketActivityRepository;
+import com.sofrecom.tickit.repository.TicketActivitySpecification;
 import com.sofrecom.tickit.repository.TicketRepository;
 import com.sofrecom.tickit.service.TicketActivityService;
 
@@ -18,12 +23,22 @@ import javax.transaction.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 @Service
 public class TicketActivityServiceImpl implements TicketActivityService {
-private final TicketActivityRepository activityRepo;
+    private final TicketActivityRepository activityRepo;
     private final TicketRepository ticketRepo;
+    
+    // Define allowed sort fields
+    private static final List<String> ALLOWED_SORT_FIELDS = Arrays.asList(
+            "startTime", 
+            "createdAt",
+            "type",
+            "username"
+    );
 
     public TicketActivityServiceImpl(TicketActivityRepository activityRepo,
                                      TicketRepository ticketRepo) {
@@ -83,23 +98,72 @@ private final TicketActivityRepository activityRepo;
     }
 
     @Override
-    public Page<TicketActivityResponse> getTimeline(UUID ticketId,
-                                                    ActivityType type,
-                                                    String username,
-                                                    Pageable pageable) {
-        Page<TicketActivity> page;
-        if (type != null && username != null) {
-            page = activityRepo.findByTicket_IdAndTypeAndUsername(ticketId, type, username, pageable);
-        } else if (type != null) {
-            page = activityRepo.findByTicket_IdAndType(ticketId, type, pageable);
-        } else if (username != null) {
-            page = activityRepo.findByTicket_IdAndUsername(ticketId, username, pageable);
-        } else {
-            page = activityRepo.findByTicket_Id(ticketId, pageable);
-        }
-        return page.map(this::toResponse);
+    public Page<TicketActivityResponse> getTimeline(
+            UUID ticketId,
+            String q,
+            ActivityType type,
+            String username,
+            int page,
+            int size,
+            String sortField,
+            String sortDir) {
+        
+        // Validate and get actual sort field
+        String actualSortField = validateSortField(sortField);
+        
+        // Validate and get sort direction
+        Sort.Direction direction = validateSortDirection(sortDir);
+        
+        // Create pageable with sort
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, actualSortField));
+        
+        // Create specification with filters
+        Specification<TicketActivity> spec = 
+            TicketActivitySpecification.filterBy(ticketId, q, type, username);
+        
+        // Query using specification
+        Page<TicketActivity> activityPage = activityRepo.findAll(spec, pageable);
+        
+        // Map to DTOs
+        return activityPage.map(this::toResponse);
     }
 
+    /**
+     * Validates the sort field and returns the actual entity field name.
+     *
+     * @param sortField The sort field provided by the user.
+     * @return The validated sort field.
+     * @throws InvalidSortParameterException If the sort field is invalid.
+     */
+    private String validateSortField(String sortField) {
+        if (!ALLOWED_SORT_FIELDS.contains(sortField)) {
+            throw new InvalidSortParameterException(
+                    "Invalid sort field: '" + sortField + "'. Allowed fields are: " +
+                    String.join(", ", ALLOWED_SORT_FIELDS)
+            );
+        }
+        return sortField;
+    }
+    
+    /**
+     * Validates the sort direction string.
+     *
+     * @param sortDir The sort direction string ("asc" or "desc", case-insensitive).
+     * @return The corresponding Sort.Direction enum.
+     * @throws InvalidSortParameterException If the direction is invalid.
+     */
+    private Sort.Direction validateSortDirection(String sortDir) {
+        if ("asc".equalsIgnoreCase(sortDir)) {
+            return Sort.Direction.ASC;
+        } else if ("desc".equalsIgnoreCase(sortDir)) {
+            return Sort.Direction.DESC;
+        } else {
+            throw new InvalidSortParameterException(
+                    "Invalid sort direction: '" + sortDir + "'. Allowed directions are: 'asc', 'desc'."
+            );
+        }
+    }
+    
     private TicketActivityResponse toResponse(TicketActivity entity) {
         TicketActivityResponse dto = new TicketActivityResponse();
         dto.setId(entity.getId());

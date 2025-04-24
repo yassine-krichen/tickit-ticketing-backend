@@ -3,15 +3,19 @@ package com.sofrecom.tickit.controller;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
+import javax.validation.constraints.Pattern;
+
 import com.sofrecom.tickit.dto.PaginatedResponse;
 import com.sofrecom.tickit.dto.TicketActivityRequest;
 import com.sofrecom.tickit.dto.TicketActivityResponse;
+import com.sofrecom.tickit.exception.InvalidSortParameterException;
 import com.sofrecom.tickit.model.TicketActivity.ActivityType;
 import com.sofrecom.tickit.service.TicketActivityService;
 
@@ -151,16 +155,21 @@ public class TicketActivityController {
      * @param ticketId the UUID of the ticket
      * @param page the page number (zero-based)
      * @param size the page size
+     * @param q optional search query for description text
      * @param type optional filter by activity type
      * @param username optional filter by username
+     * @param sortField field to sort by (startTime, createdAt, type, username)
+     * @param sortDir sort direction (asc, desc)
      * @return a paginated response of ticket activities
      */
     @Operation(summary = "Get ticket activity timeline", 
-               description = "Retrieves a paginated list of activities for a specific ticket with optional filtering")
+               description = "Retrieves a paginated list of activities for a specific ticket with optional filtering and sorting")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", 
                     description = "Activities retrieved successfully", 
                     content = @Content(schema = @Schema(implementation = PaginatedResponseTicketActivitySchema.class))),
+        @ApiResponse(responseCode = "400", 
+                    description = "Invalid input parameters (page, size, sortField, sortDir)"),
         @ApiResponse(responseCode = "404", 
                     description = "Ticket not found")
     })
@@ -168,16 +177,43 @@ public class TicketActivityController {
     public ResponseEntity<PaginatedResponse<TicketActivityResponse>> timeline(
             @Parameter(description = "Unique identifier of the ticket", required = true)
             @PathVariable UUID ticketId,
+            
             @Parameter(description = "Page number (0-based)", example = "0")
             @RequestParam(defaultValue = "0") int page,
+            
             @Parameter(description = "Number of items per page", example = "20")
             @RequestParam(defaultValue = "20") int size,
-            @Parameter(description = "Optional filter by activity type", example = "WORK_STARTED")
+            
+            @Parameter(description = "Optional search query for description text", example = "updated ticket")
+            @RequestParam(required = false) String q,
+            
+            @Parameter(description = "Optional filter by activity type", example = "UPDATE")
             @RequestParam(required = false) ActivityType type,
+            
             @Parameter(description = "Optional filter by username", example = "john.doe")
-            @RequestParam(required = false) String username) {
-        Pageable pageable = PageRequest.of(page, size);
-        Page<TicketActivityResponse> pageResult = service.getTimeline(ticketId, type, username, pageable);
+            @RequestParam(required = false) String username,
+            
+            @Parameter(description = "Field to sort by. Allowed values: startTime, createdAt, type, username", example = "startTime")
+            @RequestParam(defaultValue = "startTime")
+            @Pattern(regexp = "^(startTime|createdAt|type|username)$", 
+                    message = "Invalid sort field. Allowed: startTime, createdAt, type, username")
+            String sortField,
+            
+            @Parameter(description = "Sort direction. Allowed values: asc, desc", example = "desc")
+            @RequestParam(defaultValue = "desc")
+            @Pattern(regexp = "^(asc|desc)$", message = "Invalid sort direction. Allowed: asc, desc")
+            String sortDir) {
+        
+        Page<TicketActivityResponse> pageResult = service.getTimeline(
+                ticketId, 
+                q, 
+                type, 
+                username, 
+                page, 
+                size, 
+                sortField, 
+                sortDir);
+        
         PaginatedResponse<TicketActivityResponse> response = new PaginatedResponse<>(
                 pageResult.getContent(),
                 pageResult.getNumber(),
@@ -186,6 +222,7 @@ public class TicketActivityController {
                 pageResult.getTotalPages(),
                 pageResult.isLast()
         );
+        
         return ResponseEntity.ok(response);
     }
     
