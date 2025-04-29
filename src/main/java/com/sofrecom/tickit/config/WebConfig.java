@@ -7,6 +7,7 @@ import org.springframework.http.converter.ByteArrayHttpMessageConverter;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -40,6 +41,11 @@ public class WebConfig implements WebMvcConfigurer {
                 .maxAge(3600);
     }
     
+    @Bean
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
+    }
+
     @Bean
     public FilterRegistrationBean<RateLimitFilter> rateLimiterFilter(RateLimitFilter filter) {
         FilterRegistrationBean<RateLimitFilter> reg = new FilterRegistrationBean<>(filter);
