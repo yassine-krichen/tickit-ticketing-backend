@@ -93,7 +93,7 @@ public class WebSecurityConfig {
 		http.cors().and().csrf().disable()
 			.exceptionHandling()
 			.authenticationEntryPoint(unauthorizedHandler)
-			.accessDeniedHandler(customAccessDeniedHandler()) // Add this line
+			.accessDeniedHandler(customAccessDeniedHandler())
 			.and()
 			.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS).and()
 			.authorizeRequests()
@@ -102,6 +102,12 @@ public class WebSecurityConfig {
 				.antMatchers("/api/test/**").permitAll()
 				.antMatchers("/collaborateur/**").permitAll()
 				.antMatchers("/api/attachements/**").permitAll()
+				// Swagger UI & OpenAPI configuration
+				.antMatchers("/swagger-ui/**").permitAll()
+				.antMatchers("/api-docs/**").permitAll()
+				.antMatchers("/swagger-resources/**").permitAll()
+				.antMatchers("/swagger-ui.html").permitAll()
+				.antMatchers("/webjars/**").permitAll()
 				.anyRequest().authenticated();
 
 		http.authenticationProvider(authenticationProvider());
