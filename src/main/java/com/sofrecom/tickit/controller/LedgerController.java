@@ -7,6 +7,8 @@ import com.sofrecom.tickit.dto.VerificationResponse;
 import com.sofrecom.tickit.mapper.LedgerEntryMapper;
 import com.sofrecom.tickit.model.LedgerEntry;
 import com.sofrecom.tickit.service.LedgerService;
+import com.sofrecom.tickit.util.AuthUtils;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -25,37 +27,42 @@ import java.util.stream.Collectors;
 import javax.validation.Valid;
 
 @RestController
-@RequestMapping("/ledger")
+@RequestMapping("/api/v1/ledgers")
 @RequiredArgsConstructor
 @Tag(name = "Ledger Management", description = "APIs for blockchain ledger operations")
 public class LedgerController {
 
     private final LedgerService ledgerService;
     private final LedgerEntryMapper ledgerEntryMapper;
+    private final AuthUtils authUtils;
 
     /**
-     * Creates a new ledger entry.
+     * Creates a new ledger entry using authenticated user information.
      *
-     * @param request the ledger entry request DTO.
-     * @return a friendly response model with status and message.
+     * @param request the ledger entry request DTO
+     * @return a response containing the created ledger entry details
      */
     @Operation(summary = "Create a new ledger entry", 
-               description = "Creates a new immutable entry in the blockchain ledger")
+               description = "Creates a new immutable entry in the blockchain ledger using authenticated user information")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", 
-                    description = "Ledger entry created successfully", 
-                    content = @Content(schema = @Schema(implementation = LedgerEntryResponse.class))),
-        @ApiResponse(responseCode = "400", 
-                    description = "Invalid input data")
+        @ApiResponse(responseCode = "200", description = "Ledger entry created successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid input data"),
+        @ApiResponse(responseCode = "401", description = "User not authenticated")
     })
-    @PostMapping("/entry")
+    @PostMapping("/")
     public ResponseEntity<LedgerEntryResponse> createLedgerEntry(
             @Parameter(description = "Ledger entry details for creation", required = true)
             @Valid @RequestBody LedgerEntryRequest request) {
-            // Convert DTO to entity. Note: Ignore system-managed fields from request.
+            
+            // Extract authenticated user info and override the userFingerprint
+            String userFingerprint = authUtils.generateUserFingerprint();
+            request.setUserFingerprint(userFingerprint);
+            
+            // Convert DTO to entity and save
             LedgerEntry entry = ledgerEntryMapper.toEntity(request);
             ledgerService.saveLedgerEntry(entry);
             
+            // Prepare response
             LedgerEntryResponse response = ledgerEntryMapper.toResponse(entry);
             response.setStatus("SUCCESS");
             response.setMessage("Ledger entry created successfully");
