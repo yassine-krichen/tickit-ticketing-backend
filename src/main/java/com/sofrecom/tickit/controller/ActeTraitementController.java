@@ -28,7 +28,7 @@ import java.util.UUID;
  * Provides endpoints for creating, retrieving, updating, and deleting treatment acts.
  */
 @RestController
-@RequestMapping("/api/acte-traitements")
+@RequestMapping("/api/v1/acte-traitements") // Added version
 @RequiredArgsConstructor
 @Tag(name = "Acte Traitement", description = "APIs for treatment act operations in the ticketing system")
 public class ActeTraitementController {

@@ -6,9 +6,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-// @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
-@RequestMapping("/api/test")
+@RequestMapping("/api/v1/access-checks") // More descriptive than "test"
 public class TestController {
 	@GetMapping("/all")
 	public String allAccess() {
@@ -21,19 +20,19 @@ public class TestController {
 		return "User Content.";
 	}
 
-	@GetMapping("/prod")
+	@GetMapping("/producteur")  // Consistent naming
 	@PreAuthorize("hasRole('PRODUCTEUR')")
 	public String producteurAccess() {
 		return "Producteur Board.";
 	}
 	
-	@GetMapping("/pilo")
+	@GetMapping("/pilote")
 	@PreAuthorize("hasRole('PILOTE')")
 	public String piloteAccess() {
 		return "Pilote Board.";
 	}
 	
-	@GetMapping("/dir")
+	@GetMapping("/direction")  // Consistent naming
 	@PreAuthorize("hasRole('DIRECTION')")
 	public String directionAccess() {
 		return "Direction Board.";
@@ -44,6 +43,4 @@ public class TestController {
 	public String adminAccess() {
 		return "Admin Board.";
 	}
-	
-
 }

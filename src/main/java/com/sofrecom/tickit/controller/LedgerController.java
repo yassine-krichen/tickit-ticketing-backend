@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 import javax.validation.Valid;
 
 @RestController
-@RequestMapping("/api/v1/ledgers")
+@RequestMapping("/api/v1/ledger-entries")  // Changed from 'ledgers' to 'ledger-entries' to be more specific
 @RequiredArgsConstructor
 @Tag(name = "Ledger Management", description = "APIs for blockchain ledger operations")
 public class LedgerController {
@@ -49,7 +49,7 @@ public class LedgerController {
         @ApiResponse(responseCode = "400", description = "Invalid input data"),
         @ApiResponse(responseCode = "401", description = "User not authenticated")
     })
-    @PostMapping("/")
+    @PostMapping
     public ResponseEntity<LedgerEntryResponse> createLedgerEntry(
             @Parameter(description = "Ledger entry details for creation", required = true)
             @Valid @RequestBody LedgerEntryRequest request) {
@@ -84,7 +84,7 @@ public class LedgerController {
         @ApiResponse(responseCode = "404", 
                     description = "Ledger entry not found")
     })
-    @GetMapping("/verify/{entryId}")
+    @GetMapping("/{entryId}/verification")
     public ResponseEntity<VerificationResponse> verifyEntry(
             @Parameter(description = "Unique identifier of the ledger entry to verify", required = true)
             @PathVariable UUID entryId) {
@@ -102,7 +102,7 @@ public class LedgerController {
     @ApiResponse(responseCode = "200", 
                 description = "Blockchain verification completed", 
                 content = @Content(schema = @Schema(implementation = BlockchainVerificationResponse.class)))
-    @GetMapping("/verify/blockchain")
+    @GetMapping("/verification/blockchain")
     public ResponseEntity<BlockchainVerificationResponse> verifyBlockchain() {
         // Example implementation: The service will perform integrity checks over the entire chain.
         boolean isChainValid = ledgerService.verifyBlockchain();
@@ -125,10 +125,10 @@ public class LedgerController {
         @ApiResponse(responseCode = "404", 
                     description = "Case not found")
     })
-    @GetMapping("/case/{caseId}")
-    public ResponseEntity<List<LedgerEntryResponse>> getEntriesForCase(
-            @Parameter(description = "Unique identifier of the case", required = true)
-            @PathVariable String caseId,
+    @GetMapping
+    public ResponseEntity<List<LedgerEntryResponse>> getLedgerEntries(
+            @Parameter(description = "Unique identifier of the case")
+            @RequestParam(required = false) String caseId,
             @Parameter(description = "Type of entity to filter by (CASE or TREATMENT_ACT)")
             @RequestParam(name = "entityType", required = false) String entityType) {
         List<LedgerEntry> entries = ledgerService.getLedgerForCase(caseId, entityType);
@@ -146,10 +146,10 @@ public class LedgerController {
     @ApiResponse(responseCode = "200", 
                 description = "Ordered ledger entries retrieved successfully", 
                 content = @Content(schema = @Schema(implementation = LedgerEntryResponse.class)))
-    @GetMapping("/treatment-act/{caseId}/ordered")
+    @GetMapping("/treatment-acts")
     public ResponseEntity<List<LedgerEntryResponse>> getTreatmentActsOrdered(
             @Parameter(description = "Unique identifier of the case", required = true)
-            @PathVariable String caseId) {
+            @RequestParam String caseId) {
         List<LedgerEntry> entries = ledgerService.getLedgerForCase(caseId, "TREATMENT_ACT");
         List<LedgerEntryResponse> responses = entries.stream()
                 .sorted((a, b) -> a.getTimestamp().compareTo(b.getTimestamp()))
@@ -169,8 +169,8 @@ public class LedgerController {
         @ApiResponse(responseCode = "500", 
                     description = "Server error processing the request")
     })
-    @GetMapping("/data-snapshot")
-    public ResponseEntity<List<LedgerEntry>> getLedgerEntriesByJsonField(
+    @GetMapping("/search/by-field")
+    public ResponseEntity<List<LedgerEntry>> searchByJsonField(
             @Parameter(description = "JSON field name to search for (top-level only)", 
                       required = true, example = "status")
             @RequestParam String jsonKey, 
@@ -197,8 +197,8 @@ public class LedgerController {
         @ApiResponse(responseCode = "500", 
                     description = "Server error processing the request, often due to invalid JSON path")
     })
-    @GetMapping("data-snapshot/nested")
-    public ResponseEntity<List<LedgerEntry>> getLedgerEntriesByNestedJsonField(
+    @GetMapping("/search/by-path")
+    public ResponseEntity<List<LedgerEntry>> searchByJsonPath(
             @Parameter(description = "JSON path to search (e.g., 'status' or 'user.address.city')", 
                       required = true, example = "status")
             @RequestParam String jsonPath, 
@@ -225,8 +225,8 @@ public class LedgerController {
         @ApiResponse(responseCode = "500", 
                     description = "Server error processing the request")
     })
-    @GetMapping("data-snapshot/contains")
-    public ResponseEntity<?> getLedgerEntriesByJsonFieldContains(
+    @GetMapping("/search/by-text")
+    public ResponseEntity<?> searchByText(
             @Parameter(description = "Text to search for in the JSON data", 
                      required = true, example = "value")
             @RequestParam("jsonValue") String searchText) {

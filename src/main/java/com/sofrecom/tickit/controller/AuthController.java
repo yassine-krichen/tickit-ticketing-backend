@@ -46,7 +46,7 @@ import com.sofrecom.tickit.repository.CollaborateurRepository;
  */
 // @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/api/v1/auth") // Added version
 public class AuthController {
     
     private final AuthenticationManager authenticationManager;
