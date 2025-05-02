@@ -1,5 +1,6 @@
 package com.sofrecom.tickit.config;
 
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
@@ -35,5 +36,12 @@ public class WebConfig implements WebMvcConfigurer {
         
         source.registerCorsConfiguration("/**", config);
         return new CorsFilter(source);
+    }
+
+    @Bean
+    public FilterRegistrationBean<RateLimitFilter> rateLimiterFilter(RateLimitFilter filter) {
+        FilterRegistrationBean<RateLimitFilter> reg = new FilterRegistrationBean<>(filter);
+        reg.setOrder(1); // run very early
+        return reg;
     }
 }
