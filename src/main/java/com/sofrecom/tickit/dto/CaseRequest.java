@@ -41,6 +41,6 @@ public class CaseRequest {
     private Case.Priority priority;
     private Case.Team team;
 
-    @NotBlank(message = "CreatedBy must not be blank")
-    private String createdBy;
+    // @NotBlank(message = "CreatedBy must not be blank")
+    private String createdBy; // Case creator's fingerprint, set in the controller with authUtils
 }

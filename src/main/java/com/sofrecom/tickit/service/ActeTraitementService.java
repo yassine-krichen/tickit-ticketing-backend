@@ -20,9 +20,10 @@ public interface ActeTraitementService {
      * Records the operation in the blockchain ledger.
      *
      * @param request Treatment act request
+     * @param userFingerprint User fingerprint for ledger entry
      * @return Created treatment act response
      */
-    ActeTraitementResponse createActeTraitement(ActeTraitementRequest request);
+    ActeTraitementResponse createActeTraitement(ActeTraitementRequest request, String userFingerprint);
     
     /**
      * Retrieve a treatment act by its ID.
@@ -55,7 +56,7 @@ public interface ActeTraitementService {
      * @param updateRequest Treatment act update request
      * @return Updated treatment act
      */
-    ActeTraitementResponse updateActeTraitement(String id, ActeTraitementUpdateRequest updateRequest);
+    ActeTraitementResponse updateActeTraitement(String id, ActeTraitementUpdateRequest updateRequest, String userFingerprint);
     
     /**
      * Soft delete a treatment act.
@@ -63,7 +64,7 @@ public interface ActeTraitementService {
      *
      * @param id Treatment act ID
      */
-    void deleteActeTraitement(String id);
+    void deleteActeTraitement(String id, String userFingerprint);
     
     /**
      * Get the number of treatment acts (steps) in a case.

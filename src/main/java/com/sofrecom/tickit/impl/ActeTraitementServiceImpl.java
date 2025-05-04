@@ -52,7 +52,7 @@ public class ActeTraitementServiceImpl implements ActeTraitementService {
      */
     @Override
     @Transactional
-    public ActeTraitementResponse createActeTraitement(ActeTraitementRequest request) {
+    public ActeTraitementResponse createActeTraitement(ActeTraitementRequest request, String userFingerprint) {
         // Find or create the case
         Case associatedCase;
         
@@ -61,10 +61,10 @@ public class ActeTraitementServiceImpl implements ActeTraitementService {
                     .orElseThrow(() -> new ResourceNotFoundException("Case", "Id", request.getCaseId()));
         } else {
             // Create a new case
-            associatedCase = createNewCase(request);
+            associatedCase = createNewCase(request, userFingerprint);
             
             // Create ledger entry for the new case
-            createCaseLedgerEntry(associatedCase, LedgerEntry.ActionType.CREATE, generateUserFingerprint(request));
+            createCaseLedgerEntry(associatedCase, LedgerEntry.ActionType.CREATE, userFingerprint);
         }
 
         // Create the treatment act
@@ -78,7 +78,7 @@ public class ActeTraitementServiceImpl implements ActeTraitementService {
         acteTraitement = acteTraitementRepository.save(acteTraitement);
         
         // Create ledger entry for the new treatment act
-        createLedgerEntry(acteTraitement, LedgerEntry.ActionType.CREATE, generateUserFingerprint(request));
+        createLedgerEntry(acteTraitement, LedgerEntry.ActionType.CREATE, userFingerprint);
         
         return mapToResponse(acteTraitement);
     }
@@ -166,7 +166,7 @@ public class ActeTraitementServiceImpl implements ActeTraitementService {
      */
     @Override
     @Transactional
-    public ActeTraitementResponse updateActeTraitement(String id, ActeTraitementUpdateRequest updateRequest) {
+    public ActeTraitementResponse updateActeTraitement(String id, ActeTraitementUpdateRequest updateRequest, String userFingerprint) {
         Acte_traitement acteTraitement = acteTraitementRepository.findActiveById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Treatment act", "Id", id));
         
@@ -184,12 +184,12 @@ public class ActeTraitementServiceImpl implements ActeTraitementService {
         acteTraitement = acteTraitementRepository.save(acteTraitement);
         
         // Create ledger entry for the update
-        String userFingerprint = generateUserFingerprint(
-                updateRequest.getUserLastName(),
-                updateRequest.getUserFirstName(),
-                updateRequest.getUserRole(),
-                updateRequest.getUserTeam()
-        );
+        // String userFingerprint = generateUserFingerprint(
+        //         updateRequest.getUserLastName(),
+        //         updateRequest.getUserFirstName(),
+        //         updateRequest.getUserRole(),
+        //         updateRequest.getUserTeam()
+        // );
         createLedgerEntry(acteTraitement, LedgerEntry.ActionType.UPDATE, userFingerprint);
         
         return mapToResponse(acteTraitement);
@@ -203,13 +203,10 @@ public class ActeTraitementServiceImpl implements ActeTraitementService {
      */
     @Override
     @Transactional
-    public void deleteActeTraitement(String id) {
+    public void deleteActeTraitement(String id, String userFingerprint) {
         Acte_traitement acteTraitement = acteTraitementRepository.findActiveById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Treatment act", "Id", id));
         
-        // Get user information before deletion (simplified for now)
-        // TODO: change when you implement auth to use the actual userFingerprint instead
-        String userFingerprint = "system.delete.admin.system";
         
         // Soft delete by marking as deleted
         acteTraitement.setDeleted(true);
@@ -244,7 +241,7 @@ public class ActeTraitementServiceImpl implements ActeTraitementService {
      * @param request Treatment act request
      * @return Newly created case
      */
-    private Case createNewCase(ActeTraitementRequest request) {
+    private Case createNewCase(ActeTraitementRequest request, String userFingerprint) {
         CaseType caseType;
         try {
             caseType = request.getCaseType() != null ? 
@@ -276,7 +273,7 @@ public class ActeTraitementServiceImpl implements ActeTraitementService {
                 .priority(Case.Priority.MEDIUM)  // Default priority
                 .team(determineTeam(request.getUserTeam()))
                 .createdAt(LocalDateTime.now())
-                .createdBy(generateUserFingerprint(request))
+                .createdBy(userFingerprint)
                 .updatedAt(LocalDateTime.now())
                 .tags(new ArrayList<>())
                 .build();

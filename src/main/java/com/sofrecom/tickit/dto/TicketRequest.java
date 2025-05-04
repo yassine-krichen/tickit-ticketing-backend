@@ -40,8 +40,7 @@ public class TicketRequest {
     @NotNull(message = "Status is required")
     private Status status;
 
-    @NotBlank(message = "Issued by is required")
-    private String issuedBy;
+    private String issuedBy; // No longer required in request, will be populated from auth context
 
 }
 

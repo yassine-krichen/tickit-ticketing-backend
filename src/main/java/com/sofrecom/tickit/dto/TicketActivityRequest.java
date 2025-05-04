@@ -6,7 +6,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 
-import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 
@@ -23,10 +22,8 @@ public class TicketActivityRequest {
     /**
      * The username of the person performing the activity.
      */
-    @NotBlank(message = "Username is required")
-    @Size(min = 3, max = 50, message = "Username must be between 3 and 50 characters")
     @Schema(description = "Username of the person performing the activity", example = "john.doe", required = true)
-    private String username;
+    private String username; // No longer required in request, will be populated from auth context
 
     /**
      * The type of activity being performed (e.g., CREATE, UPDATE, DELETE).

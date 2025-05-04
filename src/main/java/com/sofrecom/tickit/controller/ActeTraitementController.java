@@ -5,6 +5,8 @@ import com.sofrecom.tickit.dto.ActeTraitementResponse;
 import com.sofrecom.tickit.dto.ActeTraitementUpdateRequest;
 import com.sofrecom.tickit.dto.PopulatedTreatmentActResponse;
 import com.sofrecom.tickit.service.ActeTraitementService;
+import com.sofrecom.tickit.util.AuthUtils;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -28,12 +30,13 @@ import java.util.UUID;
  * Provides endpoints for creating, retrieving, updating, and deleting treatment acts.
  */
 @RestController
-@RequestMapping("/api/v1/acte-traitements") // Added version
+@RequestMapping("/api/v1/treatments") // Added version
 @RequiredArgsConstructor
 @Tag(name = "Acte Traitement", description = "APIs for treatment act operations in the ticketing system")
 public class ActeTraitementController {
 
     private final ActeTraitementService acteTraitementService;
+    private final AuthUtils authUtils;
 
     /**
      * Create a new treatment act.
@@ -55,7 +58,9 @@ public class ActeTraitementController {
     public ResponseEntity<ActeTraitementResponse> createActeTraitement(
             @Parameter(description = "Treatment act details to create", required = true)
             @RequestBody ActeTraitementRequest request) {
-        ActeTraitementResponse createdActe = acteTraitementService.createActeTraitement(request);
+
+        String userFingerprint = authUtils.generateUserFingerprint();
+        ActeTraitementResponse createdActe = acteTraitementService.createActeTraitement(request, userFingerprint);
         return new ResponseEntity<>(createdActe, HttpStatus.CREATED);
     }
 
@@ -177,7 +182,9 @@ public class ActeTraitementController {
             @PathVariable String id, 
             @Parameter(description = "Updated treatment act details", required = true)
             @RequestBody ActeTraitementUpdateRequest updateRequest) {
-        ActeTraitementResponse updatedActe = acteTraitementService.updateActeTraitement(id, updateRequest);
+
+            String userFingerprint = authUtils.generateUserFingerprint();
+        ActeTraitementResponse updatedActe = acteTraitementService.updateActeTraitement(id, updateRequest, userFingerprint);
         return ResponseEntity.ok(updatedActe);
     }
 
@@ -200,7 +207,8 @@ public class ActeTraitementController {
     public ResponseEntity<Void> deleteActeTraitement(
             @Parameter(description = "Unique identifier of the treatment act to delete", required = true)
             @PathVariable String id) {
-        acteTraitementService.deleteActeTraitement(id);
+        String userFingerprint = authUtils.generateUserFingerprint();
+        acteTraitementService.deleteActeTraitement(id, userFingerprint);
         return ResponseEntity.noContent().build();
     }
 

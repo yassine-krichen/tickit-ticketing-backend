@@ -18,6 +18,7 @@ import com.sofrecom.tickit.dto.TicketActivityResponse;
 import com.sofrecom.tickit.exception.InvalidSortParameterException;
 import com.sofrecom.tickit.model.TicketActivity.ActivityType;
 import com.sofrecom.tickit.service.TicketActivityService;
+import com.sofrecom.tickit.util.AuthUtils;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -41,6 +42,7 @@ import lombok.RequiredArgsConstructor;
 public class TicketActivityController {
 
     private final TicketActivityService service;
+    private final AuthUtils authUtils;
 
     /**
      * Creates a new activity for a ticket.
@@ -66,6 +68,11 @@ public class TicketActivityController {
             @PathVariable UUID ticketId,
             @Parameter(description = "Activity details for creation", required = true)
             @RequestBody TicketActivityRequest request) {
+        
+        // Get authenticated username and override the request field
+        String username = authUtils.getAuthenticatedUsername();
+        request.setUsername(username);
+        
         return ResponseEntity.ok(service.createActivity(ticketId, request));
     }
 
@@ -96,6 +103,11 @@ public class TicketActivityController {
             @PathVariable Long activityId,
             @Parameter(description = "Updated activity details", required = true)
             @RequestBody TicketActivityRequest request) {
+        
+        // Get authenticated username and override the request field
+        String username = authUtils.getAuthenticatedUsername();
+        request.setUsername(username);
+        
         return ResponseEntity.ok(service.updateActivity(ticketId, activityId, request));
     }
 

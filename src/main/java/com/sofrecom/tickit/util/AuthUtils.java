@@ -21,6 +21,29 @@ public class AuthUtils {
     @Autowired
     private CollaborateurRepository collaborateurRepository;
 
+
+    /**
+     * Gets the username of the currently authenticated user.
+     * 
+     * @return The username of the authenticated user, or "system" if no user is authenticated
+     */
+    public String getAuthenticatedUsername() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return "system";
+        }
+        
+        if (authentication.getPrincipal() instanceof UserDetailsImpl) {
+            UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+            return userDetails.getUsername();
+        }
+        
+        // Fallback to using principal's toString if it's not a UserDetailsImpl
+        return authentication.getName();
+    }
+
+
     /**
      * Generates a user fingerprint in the format last_name.first_name.role.team
      * based on the currently authenticated user.

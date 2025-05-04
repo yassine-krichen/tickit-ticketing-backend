@@ -4,6 +4,8 @@ import com.sofrecom.tickit.dto.CaseRequest;
 import com.sofrecom.tickit.dto.CaseResponse;
 import com.sofrecom.tickit.dto.CaseUpdate;
 import com.sofrecom.tickit.service.CaseService;
+import com.sofrecom.tickit.util.AuthUtils;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -25,9 +27,11 @@ import java.util.UUID;
 public class CaseController {
 
     private final CaseService caseService;
+    private final AuthUtils authUtils;
 
-    public CaseController(CaseService caseService) {
+    public CaseController(CaseService caseService, AuthUtils authUtils) {
         this.caseService = caseService;
+        this.authUtils = authUtils;
     }
 
     /**
@@ -49,7 +53,11 @@ public class CaseController {
     public ResponseEntity<CaseResponse> createCase(
             @Parameter(description = "Case details for creation", required = true) 
             @RequestBody CaseRequest createCaseDTO) {
+
+                String userFingerprint = authUtils.generateUserFingerprint();
+                createCaseDTO.setCreatedBy(userFingerprint); // Set the createdBy field with the user's fingerprint
         CaseResponse createdCase = caseService.createCase(createCaseDTO);
+
         return ResponseEntity.status(201).body(createdCase);
     }
 

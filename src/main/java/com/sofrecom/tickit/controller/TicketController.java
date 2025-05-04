@@ -10,6 +10,7 @@ import com.sofrecom.tickit.mapper.TicketMapper;
 import com.sofrecom.tickit.model.CaseType;
 import com.sofrecom.tickit.model.Ticket;
 import com.sofrecom.tickit.service.TicketService;
+import com.sofrecom.tickit.util.AuthUtils;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -49,6 +50,7 @@ public class TicketController {
 
     private final TicketService ticketService;
     private final TicketMapper ticketMapper;
+    private final AuthUtils authUtils;
 
     /**
      * Retrieves a paginated list of tickets based on specified criteria.
@@ -131,6 +133,12 @@ public class TicketController {
             @Parameter(description = "Ticket details to create", required = true) 
             @Valid @RequestBody TicketRequest request) {
         try {
+            // Get authenticated user information
+            String issuedBy = authUtils.generateUserFingerprint();
+            
+            // Override the issuedBy field with authenticated user data
+            request.setIssuedBy(issuedBy);
+            
             Ticket ticket = ticketMapper.toEntity(request);
             Ticket createdTicket = ticketService.createTicket(ticket);
 
@@ -354,6 +362,14 @@ public class TicketController {
             @Parameter(description = "Updated ticket details", required = true) 
             @Valid @RequestBody TicketUpdateDTO request) {
         try {
+            // Get authenticated user information
+            String issuedBy = authUtils.generateUserFingerprint();
+            
+            // Set the issuedBy field if the client is trying to update it
+            if (request.getIssuedBy() != null) {
+                request.setIssuedBy(issuedBy);
+            }
+            
             Ticket updatedTicket = ticketService.updateTicket(ticketId, request);
             TicketResponse response = ticketMapper.toResponse(updatedTicket);
             response.setStatusMessage("SUCCESS");
