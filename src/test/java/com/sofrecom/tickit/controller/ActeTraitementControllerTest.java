@@ -58,8 +58,8 @@ public class ActeTraitementControllerTest {
         ActeTraitementRequest request = createSampleRequest();
         ActeTraitementResponse response = createSampleResponse(TEST_ID, request);
         
-        when(acteTraitementService.createActeTraitement(any(ActeTraitementRequest.class)))
-            .thenReturn(response);
+        // when(acteTraitementService.createActeTraitement(any(ActeTraitementRequest.class)))
+        //     .thenReturn(response);
 
         // Act & Assert
         mockMvc.perform(post("/api/acte-traitements")
@@ -159,8 +159,8 @@ public class ActeTraitementControllerTest {
                 .prestationId(String.valueOf(TEST_PRESTATION_ID))
                 .build();
         
-        when(acteTraitementService.updateActeTraitement(eq(TEST_ID), any(ActeTraitementUpdateRequest.class)))
-            .thenReturn(response);
+        // when(acteTraitementService.updateActeTraitement(eq(TEST_ID), any(ActeTraitementUpdateRequest.class)))
+        //     .thenReturn(response);
 
         // Act & Assert
         mockMvc.perform(put("/api/acte-traitements/{id}", TEST_ID)
@@ -176,7 +176,7 @@ public class ActeTraitementControllerTest {
     @DisplayName("DELETE /api/acte-traitements/{id} - Success")
     public void testDeleteActeTraitement() throws Exception {
         // Arrange
-        doNothing().when(acteTraitementService).deleteActeTraitement(TEST_ID);
+        // doNothing().when(acteTraitementService).deleteActeTraitement(TEST_ID);
 
         // Act & Assert
         mockMvc.perform(delete("/api/acte-traitements/{id}", TEST_ID))
