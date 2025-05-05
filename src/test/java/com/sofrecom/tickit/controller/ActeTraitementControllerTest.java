@@ -4,7 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sofrecom.tickit.dto.ActeTraitementRequest;
 import com.sofrecom.tickit.dto.ActeTraitementResponse;
 import com.sofrecom.tickit.dto.ActeTraitementUpdateRequest;
+import com.sofrecom.tickit.dto.PopulatedTreatmentActResponse;
 import com.sofrecom.tickit.service.ActeTraitementService;
+import com.sofrecom.tickit.util.AuthUtils;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +27,7 @@ import java.util.UUID;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
@@ -42,6 +46,9 @@ public class ActeTraitementControllerTest {
 
     @MockBean
     private ActeTraitementService acteTraitementService;
+    
+    @MockBean
+    private AuthUtils authUtils;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -50,19 +57,24 @@ public class ActeTraitementControllerTest {
     private final UUID TEST_CASE_ID = UUID.randomUUID();
     private final int TEST_PRESTATION_ID = 1;
     private final String TEST_TARIF_ID = "tarif-123";
+    private final String TEST_USER_FINGERPRINT = "doe.john.admin.tunisia";
 
     @Test
-    @DisplayName("POST /api/acte-traitements - Success")
+    @DisplayName("POST /api/v1/treatments - Success")
     public void testCreateActeTraitement() throws Exception {
         // Arrange
         ActeTraitementRequest request = createSampleRequest();
         ActeTraitementResponse response = createSampleResponse(TEST_ID, request);
         
-        when(acteTraitementService.createActeTraitement(any(ActeTraitementRequest.class)))
+        // Mock the auth utils to return a test fingerprint
+        when(authUtils.generateUserFingerprint()).thenReturn(TEST_USER_FINGERPRINT);
+        
+        // Mock the service with both request and fingerprint parameters
+        when(acteTraitementService.createActeTraitement(any(ActeTraitementRequest.class), anyString()))
             .thenReturn(response);
 
         // Act & Assert
-        mockMvc.perform(post("/api/acte-traitements")
+        mockMvc.perform(post("/api/v1/treatments")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -72,7 +84,7 @@ public class ActeTraitementControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/acte-traitements/{id} - Success")
+    @DisplayName("GET /api/v1/treatments/{id} - Success")
     public void testGetActeTraitement() throws Exception {
         // Arrange
         ActeTraitementResponse response = createSampleResponse(TEST_ID, createSampleRequest());
@@ -81,7 +93,7 @@ public class ActeTraitementControllerTest {
             .thenReturn(response);
 
         // Act & Assert
-        mockMvc.perform(get("/api/acte-traitements/{id}", TEST_ID)
+        mockMvc.perform(get("/api/v1/treatments/{id}", TEST_ID)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.idacte", is(TEST_ID)))
@@ -89,7 +101,7 @@ public class ActeTraitementControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/acte-traitements - Success")
+    @DisplayName("GET /api/v1/treatments - Success")
     public void testGetAllActeTraitements() throws Exception {
         // Arrange
         List<ActeTraitementResponse> responses = Arrays.asList(
@@ -101,7 +113,7 @@ public class ActeTraitementControllerTest {
             .thenReturn(responses);
 
         // Act & Assert
-        mockMvc.perform(get("/api/acte-traitements")
+        mockMvc.perform(get("/api/v1/treatments")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)))
@@ -110,7 +122,7 @@ public class ActeTraitementControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/acte-traitements/case/{caseId} - Success")
+    @DisplayName("GET /api/v1/treatments/case/{caseId} - Success")
     public void testGetActeTraitementsByCaseId() throws Exception {
         // Arrange
         List<ActeTraitementResponse> responses = Collections.singletonList(
@@ -121,7 +133,7 @@ public class ActeTraitementControllerTest {
             .thenReturn(responses);
 
         // Act & Assert
-        mockMvc.perform(get("/api/acte-traitements/case/{caseId}", TEST_CASE_ID)
+        mockMvc.perform(get("/api/v1/treatments/case/{caseId}", TEST_CASE_ID)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
@@ -129,7 +141,7 @@ public class ActeTraitementControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/acte-traitements/case/{caseId}/steps - Success")
+    @DisplayName("GET /api/v1/treatments/case/{caseId}/steps - Success")
     public void testGetNumberOfStepsByCaseId() throws Exception {
         // Arrange
         int numberOfSteps = 5;
@@ -138,14 +150,14 @@ public class ActeTraitementControllerTest {
             .thenReturn(numberOfSteps);
 
         // Act & Assert
-        mockMvc.perform(get("/api/acte-traitements/case/{caseId}/steps", TEST_CASE_ID)
+        mockMvc.perform(get("/api/v1/treatments/case/{caseId}/steps", TEST_CASE_ID)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.steps", is(numberOfSteps)));
     }
 
     @Test
-    @DisplayName("PUT /api/acte-traitements/{id} - Success")
+    @DisplayName("PUT /api/v1/treatments/{id} - Success")
     public void testUpdateActeTraitement() throws Exception {
         // Arrange
         ActeTraitementUpdateRequest updateRequest = createSampleUpdateRequest();
@@ -159,11 +171,15 @@ public class ActeTraitementControllerTest {
                 .prestationId(String.valueOf(TEST_PRESTATION_ID))
                 .build();
         
-        when(acteTraitementService.updateActeTraitement(eq(TEST_ID), any(ActeTraitementUpdateRequest.class)))
+        // Mock the auth utils to return a test fingerprint
+        when(authUtils.generateUserFingerprint()).thenReturn(TEST_USER_FINGERPRINT);
+        
+        // Mock the service with both updateRequest and fingerprint parameters
+        when(acteTraitementService.updateActeTraitement(eq(TEST_ID), any(ActeTraitementUpdateRequest.class), anyString()))
             .thenReturn(response);
 
         // Act & Assert
-        mockMvc.perform(put("/api/acte-traitements/{id}", TEST_ID)
+        mockMvc.perform(put("/api/v1/treatments/{id}", TEST_ID)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isOk())
@@ -173,14 +189,39 @@ public class ActeTraitementControllerTest {
     }
 
     @Test
-    @DisplayName("DELETE /api/acte-traitements/{id} - Success")
+    @DisplayName("DELETE /api/v1/treatments/{id} - Success")
     public void testDeleteActeTraitement() throws Exception {
         // Arrange
-        doNothing().when(acteTraitementService).deleteActeTraitement(TEST_ID);
+        // Mock the auth utils to return a test fingerprint
+        when(authUtils.generateUserFingerprint()).thenReturn(TEST_USER_FINGERPRINT);
+        
+        // Mock the service with both id and fingerprint parameters
+        doNothing().when(acteTraitementService).deleteActeTraitement(eq(TEST_ID), anyString());
 
         // Act & Assert
-        mockMvc.perform(delete("/api/acte-traitements/{id}", TEST_ID))
+        mockMvc.perform(delete("/api/v1/treatments/{id}", TEST_ID))
                 .andExpect(status().isNoContent());
+    }
+    
+    @Test
+    @DisplayName("GET /api/v1/treatments/{id}/populated - Success")
+    public void testGetPopulatedActeTraitement() throws Exception {
+        // Arrange
+        PopulatedTreatmentActResponse response = PopulatedTreatmentActResponse.builder()
+                .idacte(TEST_ID)
+                .type_element("TestElement")
+                .caseId(TEST_CASE_ID)
+                .caseName("Test Case")
+                .build();
+        
+        when(acteTraitementService.getPopulatedActeTraitementById(TEST_ID))
+            .thenReturn(response);
+
+        // Act & Assert
+        mockMvc.perform(get("/api/v1/treatments/{id}/populated", TEST_ID)
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.idacte", is(TEST_ID)));
     }
 
     /**

@@ -16,11 +16,34 @@ import java.util.UUID;
 
 import javax.transaction.Transactional;
 
+/**
+ * Repository interface for ticket activities.
+ * Provides methods for database operations on TicketActivity entities.
+ */
 public interface TicketActivityRepository extends 
         PagingAndSortingRepository<TicketActivity, Long>,
         JpaSpecificationExecutor<TicketActivity> {
     
+    /**
+     * Finds an activity by its ID and the ticket it belongs to.
+     *
+     * @param id The activity ID
+     * @param ticketId The ticket ID
+     * @return Optional containing the activity if found
+     */
     Optional<TicketActivity> findByIdAndTicket_Id(Long id, UUID ticketId);
+    
+    /**
+     * Alternative method name for finding an activity by ID and ticket ID.
+     * This matches the method name used in the service implementation.
+     *
+     * @param id The activity ID
+     * @param ticketId The ticket ID
+     * @return Optional containing the activity if found
+     */
+    default Optional<TicketActivity> findByIdAndTicketId(Long id, UUID ticketId) {
+        return findByIdAndTicket_Id(id, ticketId);
+    }
 
     Page<TicketActivity> findByTicket_Id(UUID ticketId, Pageable pageable);
 
@@ -39,6 +62,8 @@ public interface TicketActivityRepository extends
 
     /**
      * Permanently deletes all activities soft-deleted before the given threshold.
+     *
+     * @param threshold The cutoff timestamp for deletion
      */
     @Modifying
     @Transactional

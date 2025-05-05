@@ -9,6 +9,8 @@ import javax.persistence.Id;
 import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
+import javax.persistence.CascadeType;
 import javax.persistence.Table;
 import javax.persistence.Column;
 import javax.persistence.Enumerated;
@@ -18,6 +20,8 @@ import javax.persistence.PostLoad;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -131,6 +135,36 @@ public class TicketActivity {
         if (endTime != null) {
             this.duration = Duration.between(startTime, endTime);
         }
+    }
+
+    /**
+     * List of comments associated with this activity.
+     */
+    @OneToMany(mappedBy = "activity", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TicketActivityComment> comments = new ArrayList<>();
+
+    /**
+     * Adds a comment to this activity.
+     *
+     * @param comment The comment to add
+     * @return This activity for method chaining
+     */
+    public TicketActivity addComment(TicketActivityComment comment) {
+        comments.add(comment);
+        comment.setActivity(this);
+        return this;
+    }
+
+    /**
+     * Removes a comment from this activity.
+     *
+     * @param comment The comment to remove
+     * @return This activity for method chaining
+     */
+    public TicketActivity removeComment(TicketActivityComment comment) {
+        comments.remove(comment);
+        comment.setActivity(null);
+        return this;
     }
 
     /**

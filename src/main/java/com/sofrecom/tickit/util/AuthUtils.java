@@ -36,7 +36,15 @@ public class AuthUtils {
         
         if (authentication.getPrincipal() instanceof UserDetailsImpl) {
             UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-            return userDetails.getUsername();
+            Collaborateur collaborateur = collaborateurRepository.findByCUID(userDetails.getUsername())
+                    .orElse(null);
+            if (collaborateur != null) {
+                String firstName = collaborateur.getPrenom() != null ? collaborateur.getPrenom() : "unknown";
+                String lastName = collaborateur.getNom() != null ? collaborateur.getNom() : "unknown";
+                return String.format("%s %s", firstName, lastName);
+            }
+
+            return "unknown_user";
         }
         
         // Fallback to using principal's toString if it's not a UserDetailsImpl
