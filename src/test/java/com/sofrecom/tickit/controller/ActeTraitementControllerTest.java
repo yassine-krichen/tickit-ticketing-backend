@@ -1,6 +1,7 @@
 package com.sofrecom.tickit.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sofrecom.tickit.config.TestSecurityConfig;
 import com.sofrecom.tickit.dto.ActeTraitementRequest;
 import com.sofrecom.tickit.dto.ActeTraitementResponse;
 import com.sofrecom.tickit.dto.ActeTraitementUpdateRequest;
@@ -8,12 +9,15 @@ import com.sofrecom.tickit.dto.PopulatedTreatmentActResponse;
 import com.sofrecom.tickit.service.ActeTraitementService;
 import com.sofrecom.tickit.util.AuthUtils;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -38,6 +42,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Tests for the ActeTraitementController endpoints.
  */
 @WebMvcTest(ActeTraitementController.class)
+@Import(TestSecurityConfig.class)
 @ActiveProfiles("test")
 public class ActeTraitementControllerTest {
 
@@ -59,15 +64,19 @@ public class ActeTraitementControllerTest {
     private final String TEST_TARIF_ID = "tarif-123";
     private final String TEST_USER_FINGERPRINT = "doe.john.admin.tunisia";
 
+    @BeforeEach
+    public void setup() {
+        // Set up common mocks for all tests
+        when(authUtils.generateUserFingerprint()).thenReturn(TEST_USER_FINGERPRINT);
+    }
+
     @Test
+    @WithMockUser(username = "test_user", roles = "ADMIN")
     @DisplayName("POST /api/v1/treatments - Success")
     public void testCreateActeTraitement() throws Exception {
         // Arrange
         ActeTraitementRequest request = createSampleRequest();
         ActeTraitementResponse response = createSampleResponse(TEST_ID, request);
-        
-        // Mock the auth utils to return a test fingerprint
-        when(authUtils.generateUserFingerprint()).thenReturn(TEST_USER_FINGERPRINT);
         
         // Mock the service with both request and fingerprint parameters
         when(acteTraitementService.createActeTraitement(any(ActeTraitementRequest.class), anyString()))
@@ -84,6 +93,7 @@ public class ActeTraitementControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "test_user", roles = "ADMIN")
     @DisplayName("GET /api/v1/treatments/{id} - Success")
     public void testGetActeTraitement() throws Exception {
         // Arrange
@@ -101,6 +111,7 @@ public class ActeTraitementControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "test_user", roles = "ADMIN")
     @DisplayName("GET /api/v1/treatments - Success")
     public void testGetAllActeTraitements() throws Exception {
         // Arrange
@@ -122,6 +133,7 @@ public class ActeTraitementControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "test_user", roles = "ADMIN")
     @DisplayName("GET /api/v1/treatments/case/{caseId} - Success")
     public void testGetActeTraitementsByCaseId() throws Exception {
         // Arrange
@@ -141,6 +153,7 @@ public class ActeTraitementControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "test_user", roles = "ADMIN")
     @DisplayName("GET /api/v1/treatments/case/{caseId}/steps - Success")
     public void testGetNumberOfStepsByCaseId() throws Exception {
         // Arrange
@@ -157,6 +170,7 @@ public class ActeTraitementControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "test_user", roles = "ADMIN")
     @DisplayName("PUT /api/v1/treatments/{id} - Success")
     public void testUpdateActeTraitement() throws Exception {
         // Arrange
@@ -170,9 +184,6 @@ public class ActeTraitementControllerTest {
                 .caseId(TEST_CASE_ID)
                 .prestationId(String.valueOf(TEST_PRESTATION_ID))
                 .build();
-        
-        // Mock the auth utils to return a test fingerprint
-        when(authUtils.generateUserFingerprint()).thenReturn(TEST_USER_FINGERPRINT);
         
         // Mock the service with both updateRequest and fingerprint parameters
         when(acteTraitementService.updateActeTraitement(eq(TEST_ID), any(ActeTraitementUpdateRequest.class), anyString()))
@@ -189,12 +200,10 @@ public class ActeTraitementControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "test_user", roles = "ADMIN")
     @DisplayName("DELETE /api/v1/treatments/{id} - Success")
     public void testDeleteActeTraitement() throws Exception {
         // Arrange
-        // Mock the auth utils to return a test fingerprint
-        when(authUtils.generateUserFingerprint()).thenReturn(TEST_USER_FINGERPRINT);
-        
         // Mock the service with both id and fingerprint parameters
         doNothing().when(acteTraitementService).deleteActeTraitement(eq(TEST_ID), anyString());
 
@@ -204,6 +213,7 @@ public class ActeTraitementControllerTest {
     }
     
     @Test
+    @WithMockUser(username = "test_user", roles = "ADMIN")
     @DisplayName("GET /api/v1/treatments/{id}/populated - Success")
     public void testGetPopulatedActeTraitement() throws Exception {
         // Arrange

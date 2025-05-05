@@ -40,13 +40,17 @@ import com.sofrecom.tickit.impl.UserDetailsImpl;
 import com.sofrecom.tickit.model.Collaborateur;
 import com.sofrecom.tickit.repository.CollaborateurRepository;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 /**
  * Controller for handling authentication related endpoints.
  * Provides functionality for user login, registration and role management.
  */
-// @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/v1/auth") // Added version
+@Tag(name = "Authentication", description = "APIs for user authentication and authorization")
 public class AuthController {
     
     private final AuthenticationManager authenticationManager;
@@ -85,6 +89,11 @@ public class AuthController {
      * @return JWT token response with user details
      */
     @PostMapping("/signin")
+    @Operation(
+        summary = "Authenticate user and get JWT token",
+        description = "Authenticates user credentials and returns a JWT token for authorization"
+    )
+    @SecurityRequirements() // Empty to exclude security requirements
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
         // Authenticate the user
         Authentication authentication = authenticationManager.authenticate(
@@ -126,6 +135,11 @@ public class AuthController {
      * @return Success or error message
      */
     @PostMapping("/signup")
+    @Operation(
+        summary = "Register a new user",
+        description = "Creates a new user account with basic role"
+    )
+    @SecurityRequirements() // Empty to exclude security requirements
     public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
         // Check if username already exists
         if (userRepository.existsByUsername(signUpRequest.getUsername())) {
@@ -178,6 +192,11 @@ public class AuthController {
      * @return Success or error message
      */
     @PostMapping("/assignRoles/{cuid}")
+    @Operation(
+        summary = "Assign roles to a user",
+        description = "Assigns one or more roles to an existing user"
+    )
+    @SecurityRequirements() // Empty to exclude security requirements
     public ResponseEntity<?> assignRolesToUser(
             @PathVariable String cuid, 
             @Valid @RequestBody RoleAssignmentRequest request) {

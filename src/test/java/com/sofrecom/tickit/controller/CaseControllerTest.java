@@ -1,6 +1,7 @@
 package com.sofrecom.tickit.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sofrecom.tickit.config.TestSecurityConfig;
 import com.sofrecom.tickit.dto.CaseRequest;
 import com.sofrecom.tickit.dto.CaseResponse;
 import com.sofrecom.tickit.dto.CaseUpdate;
@@ -13,7 +14,9 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -33,6 +36,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Tests for the CaseController endpoints.
  */
 @WebMvcTest(CaseController.class)
+@Import(TestSecurityConfig.class)
 @ActiveProfiles("test")
 public class CaseControllerTest {
 
@@ -46,6 +50,7 @@ public class CaseControllerTest {
     private ObjectMapper objectMapper;
 
     @Test
+    @WithMockUser(username = "test_user", roles = "ADMIN")
     @DisplayName("POST /api/v1/cases - Success")
     public void testCreateCase() throws Exception {
         CaseRequest request = CaseRequest.builder()
@@ -83,6 +88,7 @@ public class CaseControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "test_user", roles = "ADMIN")
     @DisplayName("GET /api/v1/cases - Success")
     public void testGetAllCases() throws Exception {
         CaseResponse response = CaseResponse.builder()
@@ -107,6 +113,7 @@ public class CaseControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "test_user", roles = "ADMIN")
     @DisplayName("GET /api/v1/cases/{id} - Success")
     public void testGetCaseById() throws Exception {
         UUID id = UUID.randomUUID();
@@ -133,6 +140,7 @@ public class CaseControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "test_user", roles = "ADMIN")
     @DisplayName("PUT /api/v1/cases/{id} - Success")
     public void testUpdateCase() throws Exception {
         UUID id = UUID.randomUUID();
@@ -170,6 +178,7 @@ public class CaseControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "test_user", roles = "ADMIN")
     @DisplayName("DELETE /api/v1/cases/{id} - Success")
     public void testDeleteCase() throws Exception {
         UUID id = UUID.randomUUID();

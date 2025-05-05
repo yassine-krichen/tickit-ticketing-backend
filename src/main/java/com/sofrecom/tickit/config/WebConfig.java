@@ -3,18 +3,20 @@ package com.sofrecom.tickit.config;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.converter.ByteArrayHttpMessageConverter;
+import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import java.util.List;
 
 /**
- * Configuration class for web-related settings including CORS.
- * Allows specific origins with credentials for API access.
+ * Configuration class for web-related settings including CORS
+ * and proper message-converter ordering to prevent Swagger JSON
+ * from being Base64-encoded.
  */
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
@@ -25,45 +27,37 @@ public class WebConfig implements WebMvcConfigurer {
         this.objectMapper = objectMapper;
     }
 
-    /**
-     * Configure Cross-Origin Resource Sharing (CORS) settings.
-     * 
-     * @param registry CORS registry to add mappings to
-     */
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
                 .allowedOrigins(
-                    "http://localhost:4200", // Angular frontend
-                    "http://localhost:3000"  // For Bruno or other local tools
+                    "http://localhost:4200",
+                    "http://localhost:3000"
                 )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true)
-                .maxAge(3600); // Cache preflight requests for 1 hour (3600 seconds)
+                .maxAge(3600);
     }
     
-    /**
-     * Registers the rate limiter filter with a high priority.
-     * 
-     * @param filter The rate limit filter
-     * @return FilterRegistrationBean for the rate limiter
-     */
     @Bean
     public FilterRegistrationBean<RateLimitFilter> rateLimiterFilter(RateLimitFilter filter) {
         FilterRegistrationBean<RateLimitFilter> reg = new FilterRegistrationBean<>(filter);
-        reg.setOrder(1); // run very early
+        reg.setOrder(1);
         return reg;
     }
-    
+
     /**
-     * Configure message converters to use our properly configured ObjectMapper.
-     * This ensures consistent date/time handling across the application.
+     * Ensure ByteArray and String converters come before
+     * Jackson so JSON isn’t Base64-encoded as byte[].
      */
     @Override
     public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
-        MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter();
-        converter.setObjectMapper(objectMapper);
-        converters.add(0, converter); // Add at index 0 to ensure this is used first
+        // 1) Handle raw bytes directly (prevents JSON → Base64) :contentReference[oaicite:0]{index=0}
+        converters.add(new ByteArrayHttpMessageConverter());
+        // 2) Handle plain text
+        converters.add(new StringHttpMessageConverter());
+        // 3) Finally, JSON via Jackson
+        converters.add(new MappingJackson2HttpMessageConverter(objectMapper));
     }
 }
