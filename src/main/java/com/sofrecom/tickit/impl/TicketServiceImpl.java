@@ -1,15 +1,21 @@
 package com.sofrecom.tickit.impl;
 
+import com.sofrecom.tickit.dto.CaseUpdate;
 import com.sofrecom.tickit.dto.TicketCount;
 import com.sofrecom.tickit.dto.TicketUpdateDTO;
 import com.sofrecom.tickit.exception.EntityCreationException;
+// import com.sofrecom.tickit.exception.InvalidSlaStrategyException;
 import com.sofrecom.tickit.exception.InvalidSortParameterException;
+import com.sofrecom.tickit.model.Acte_traitement;
+import com.sofrecom.tickit.model.Case;
 import com.sofrecom.tickit.model.CaseType;
 import com.sofrecom.tickit.model.Ticket;
 import com.sofrecom.tickit.repository.TicketRepository;
 import com.sofrecom.tickit.repository.TicketSpecification;
+import com.sofrecom.tickit.service.CaseService;
 import com.sofrecom.tickit.service.TicketService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -18,8 +24,15 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.persistence.criteria.Join;
+import javax.persistence.criteria.JoinType;
+
+import javax.persistence.Entity;
 import javax.persistence.EntityManager;
+import javax.persistence.Id;
 import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
+import javax.persistence.Column;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Root;
@@ -34,9 +47,11 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class TicketServiceImpl implements TicketService {
 
     private final TicketRepository ticketRepository;
+    private final CaseService caseService;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -153,7 +168,15 @@ public class TicketServiceImpl implements TicketService {
         return Collections.unmodifiableMap(slaConfigs);
     }
 
+    /**
+     * Creates a new ticket and updates the associated case status to BLOCKED.
+     *
+     * @param ticket The ticket to create
+     * @return The created ticket
+     * @throws EntityCreationException if there is an error creating the ticket
+     */
     @Override
+    @Transactional
     public Ticket createTicket(Ticket ticket) throws EntityCreationException {
         try {
             // Validate type-step combination
@@ -172,9 +195,15 @@ public class TicketServiceImpl implements TicketService {
                 ticket.setResolutionSla(calculateResolutionSLA(ticket.getType(), ticket.getStep(), ticket.getPriority()));
             }
 
-            return ticketRepository.save(ticket);
+            // Save the ticket first to ensure it exists
+            Ticket savedTicket = ticketRepository.save(ticket);
+            
+            // Update the associated case status to BLOCKED if a case is associated
+            updateCaseStatusForTicketCreation(savedTicket);
+            
+            return savedTicket;
         } catch (Exception e) {
-            throw new EntityCreationException("Ticket", "Failed to create ticket", e);
+            throw new EntityCreationException("Ticket", "Failed to create ticket: " + e.getMessage(), e);
         }
     }
 
@@ -245,15 +274,37 @@ public class TicketServiceImpl implements TicketService {
         }
     }
 
+    /**
+     * Updates the ticket status and manages the associated case status.
+     * If the ticket status is changed to RESOLVED, the case status will be updated to ONGOING.
+     *
+     * @param ticketId The ID of the ticket to update
+     * @param status The new status for the ticket
+     * @return The updated ticket
+     * @throws EntityCreationException if there is an error updating the ticket
+     */
     @Override
+    @Transactional
     public Ticket updateTicketStatus(UUID ticketId, Ticket.Status status) throws EntityCreationException {
         Ticket ticket = getTicketById(ticketId);
         if (ticket == null) {
             throw new EntityCreationException("Ticket", "Ticket not found");
         }
+        
+        // Store the previous status for comparison
+        Ticket.Status previousStatus = ticket.getStatus();
+        
+        // Update the ticket status
         ticket.setStatus(status);
         ticket.setUpdatedAt(LocalDateTime.now());
-        return saveTicket(ticket);
+        Ticket updatedTicket = saveTicket(ticket);
+        
+        // Check if the ticket is being resolved/closed
+        if (status == Ticket.Status.RESOLVED && previousStatus != Ticket.Status.RESOLVED) {
+            updateCaseStatusForTicketResolution(updatedTicket);
+        }
+        
+        return updatedTicket;
     }
 
     @Override
@@ -668,4 +719,123 @@ public class TicketServiceImpl implements TicketService {
             );
         }
     }
+
+    /**
+     * Updates the associated case status to BLOCKED when a ticket is created.
+     * 
+     * @param ticket The newly created ticket
+     */
+    private void updateCaseStatusForTicketCreation(Ticket ticket) {
+        if (ticket.getActeTraitement() == null) {
+            log.debug("Ticket has no associated treatment act ID, skipping case update");
+            return;
+        }
+        
+        try {
+            UUID caseId = resolveTicketCaseId(ticket);
+            
+            if (caseId != null) {
+                log.info("Updating case {} status to BLOCKED due to new ticket creation", caseId);
+                
+                // Create a case update DTO and set the status to BLOCKED
+                CaseUpdate caseUpdate = new CaseUpdate();
+                caseUpdate.setStatus(Case.Status.BLOCKED);
+                
+                // Use the CaseService to update the case
+                caseService.updateCase(caseId, caseUpdate);
+                
+                log.info("Successfully updated case {} status to BLOCKED", caseId);
+            }
+        } catch (Exception e) {
+            // Log the error but don't fail the ticket creation
+            log.error("Failed to update case status for ticket {}: {}", ticket.getId(), e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Updates the associated case status to ONGOING when a ticket is resolved.
+     * Only updates the case if all associated tickets are resolved.
+     * 
+     * @param ticket The resolved ticket
+     */
+    private void updateCaseStatusForTicketResolution(Ticket ticket) {
+        if (ticket.getActeTraitement() == null) {
+            log.debug("Resolved ticket has no associated treatment act ID, skipping case update");
+            return;
+        }
+        
+        try {
+            // Resolve the case ID from the ticket
+            UUID caseId = resolveTicketCaseId(ticket);
+            
+            if (caseId != null) {
+                // Check if all tickets for this case are resolved before updating the case status
+                // TODO: check the validity of this method
+                if (areAllCaseTicketsResolved(caseId)) {
+                    log.info("All tickets for case {} are resolved, updating status to ONGOING", caseId);
+                    
+                    // Create a case update DTO and set the status to ONGOING
+                    CaseUpdate caseUpdate = new CaseUpdate();
+                    caseUpdate.setStatus(Case.Status.ONGOING);
+                    
+                    // Use the CaseService to update the case
+                    caseService.updateCase(caseId, caseUpdate);
+                    
+                    log.info("Successfully updated case {} status to ONGOING", caseId);
+                } else {
+                    log.info("Not all tickets for case {} are resolved, keeping status as BLOCKED", caseId);
+                }
+            }
+        } catch (Exception e) {
+            // Log the error but don't fail the ticket resolution
+            log.error("Failed to update case status for resolved ticket {}: {}", ticket.getId(), e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Resolves the case ID associated with a ticket.
+     * This is a helper method that handles the relationship between tickets, treatment acts, and cases.
+     * 
+     * @param ticket The ticket to resolve the case for
+     * @return The associated case ID, or null if no case is associated
+     */
+    private UUID resolveTicketCaseId(Ticket ticket) {
+        if (ticket.getActeTraitement() == null) {
+            return null;
+        }
+        Case associatedCase = ticket.getActeTraitement().getAssociatedCase();
+        return associatedCase != null ? associatedCase.getId() : null;
+    }
+    
+    /**
+ * Checks if all tickets associated with a case are resolved.
+ * 
+ * @param caseId The case ID to check
+ * @return true if all tickets are resolved, false otherwise
+ */
+private boolean areAllCaseTicketsResolved(UUID caseId) {
+    try {
+        // Get all active tickets for this case
+        Specification<Ticket> spec = (root, query, cb) -> {
+            // Join with acteTraitement to access its associatedCase
+            Join<Ticket, Acte_traitement> actJoin = root.join("acteTraitement", JoinType.INNER);
+            Join<Acte_traitement, Case> caseJoin = actJoin.join("associatedCase", JoinType.INNER);
+            
+            return cb.and(
+                // Filter by case ID through the correct join path
+                cb.equal(caseJoin.get("id"), caseId),
+                // Exclude already resolved tickets
+                cb.notEqual(root.get("status"), Ticket.Status.RESOLVED)
+            );
+        };
+        
+        // If we find any non-resolved tickets, return false
+        long unresolved = ticketRepository.count(spec);
+        return unresolved == 0;
+    } catch (Exception e) {
+        log.warn("Error checking if all tickets are resolved for case {}: {}", caseId, e.getMessage());
+        // Default to false if we can't determine for sure
+        return false;
+    }
+}
 }
