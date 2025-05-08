@@ -125,7 +125,7 @@ public class AIPromptBuilder {
             "4. Key Risk Factors",
             act.getIdacte(),
             act.getPrestationName(),
-            act.getStatus(),
+            act.getStatutFacturation() != null ? act.getStatutFacturation() : "N/A",
             act.getPriorite(),
             formatSimilarActs(similarActs)
         );
