@@ -12,7 +12,7 @@ import java.util.Optional;
  * Provides methods for CRUD operations and custom queries related to collaborateurs.
  */
 @Repository
-public interface CollaborateurRepository extends JpaRepository<Collaborateur, Long> {
+public interface CollaborateurRepository extends JpaRepository<Collaborateur, String> {
     
     /**
      * Finds a collaborateur by their CUID (Collaborator Unique ID).

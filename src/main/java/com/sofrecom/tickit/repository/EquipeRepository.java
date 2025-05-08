@@ -11,7 +11,7 @@ import java.util.Optional;
  * Provides methods for CRUD operations and custom queries related to teams.
  */
 @Repository
-public interface EquipeRepository extends JpaRepository<Equipe, Long> {
+public interface EquipeRepository extends JpaRepository<Equipe, Integer> {
     
     /**
      * Finds a team by its ID.
