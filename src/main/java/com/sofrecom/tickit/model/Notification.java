@@ -70,6 +70,7 @@ public class Notification {
 
     @NotNull
     @Builder.Default
+    @Column(name = "read_flag")
     @Schema(description = "Whether the notification has been read", required = true)
     private Boolean readFlag = false;
 

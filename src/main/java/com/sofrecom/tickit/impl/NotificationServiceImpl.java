@@ -1,6 +1,8 @@
 package com.sofrecom.tickit.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.sofrecom.tickit.dto.NotificationFilterRequest;
 import com.sofrecom.tickit.dto.NotificationResponse;
 import com.sofrecom.tickit.exception.ResourceNotFoundException;
@@ -20,6 +22,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,6 +44,8 @@ public class NotificationServiceImpl implements NotificationService {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
     private final AuthUtils authUtils;
+    private final SimpMessagingTemplate messagingTemplate;
+    private final ObjectMapper objectMapper;
     
     /**
      * {@inheritDoc}
@@ -63,7 +68,12 @@ public class NotificationServiceImpl implements NotificationService {
                 .build();
         
         Notification savedNotification = notificationRepository.save(notification);
-        return mapToResponse(savedNotification);
+        NotificationResponse response = mapToResponse(savedNotification);
+        
+        // Send real-time notification via WebSocket
+        sendRealTimeNotification(user.getUsername(), response);
+        
+        return response;
     }
     
     /**
@@ -103,8 +113,15 @@ public class NotificationServiceImpl implements NotificationService {
             notifications.add(notification);
         }
         
-        notificationRepository.saveAll(notifications);
-        return notifications.size();
+        List<Notification> savedNotifications = notificationRepository.saveAll(notifications);
+        
+        // Send real-time notifications to each user
+        for (Notification notification : savedNotifications) {
+            NotificationResponse response = mapToResponse(notification);
+            sendRealTimeNotification(notification.getUserRef().getUsername(), response);
+        }
+        
+        return savedNotifications.size();
     }
     
     /**
@@ -277,5 +294,29 @@ public class NotificationServiceImpl implements NotificationService {
                 .readAt(notification.getReadAt())
                 .type(notification.getType())
                 .build();
+    }
+    
+    /**
+     * Sends a real-time notification to a user via WebSocket.
+     * 
+     * @param username The username of the recipient
+     * @param notification The notification to send
+     */
+    private void sendRealTimeNotification(String username, NotificationResponse notification) {
+        try {
+            String destination = "/queue/notifications";
+            messagingTemplate.convertAndSendToUser(username, destination, notification);
+            
+            // Also send a count update
+            long unreadCount = notificationRepository.countByUserRefAndReadFlagFalse(
+                    userRepository.findByUsername(username).orElse(null));
+            ObjectNode countNode = objectMapper.createObjectNode();
+            countNode.put("unreadCount", unreadCount);
+            messagingTemplate.convertAndSendToUser(username, "/queue/notifications/count", countNode);
+            
+            log.debug("Sent real-time notification to user {}: {}", username, notification);
+        } catch (Exception e) {
+            log.error("Failed to send real-time notification to user {}: {}", username, e.getMessage(), e);
+        }
     }
 }

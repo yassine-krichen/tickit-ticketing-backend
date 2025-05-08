@@ -1,11 +1,13 @@
 package com.sofrecom.tickit.impl;
 
+import com.sofrecom.tickit.dto.CaseResponse;
 import com.sofrecom.tickit.dto.CaseUpdate;
 import com.sofrecom.tickit.dto.TicketCount;
 import com.sofrecom.tickit.dto.TicketUpdateDTO;
 import com.sofrecom.tickit.exception.EntityCreationException;
 // import com.sofrecom.tickit.exception.InvalidSlaStrategyException;
 import com.sofrecom.tickit.exception.InvalidSortParameterException;
+import com.sofrecom.tickit.listener.*;
 import com.sofrecom.tickit.model.Acte_traitement;
 import com.sofrecom.tickit.model.Case;
 import com.sofrecom.tickit.model.CaseType;
@@ -16,6 +18,7 @@ import com.sofrecom.tickit.service.CaseService;
 import com.sofrecom.tickit.service.TicketService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -27,12 +30,8 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.persistence.criteria.Join;
 import javax.persistence.criteria.JoinType;
 
-import javax.persistence.Entity;
 import javax.persistence.EntityManager;
-import javax.persistence.Id;
 import javax.persistence.PersistenceContext;
-import javax.persistence.Table;
-import javax.persistence.Column;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Root;
@@ -52,6 +51,7 @@ public class TicketServiceImpl implements TicketService {
 
     private final TicketRepository ticketRepository;
     private final CaseService caseService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -188,6 +188,7 @@ public class TicketServiceImpl implements TicketService {
 
             LocalDateTime now = LocalDateTime.now();
             ticket.setCreatedAt(now);
+            ticket.setUpdatedAt(now);
 
             // Calculate and set SLAs
             if (ticket.getType() != null && ticket.getStep() != null && ticket.getPriority() != null) {
@@ -200,6 +201,9 @@ public class TicketServiceImpl implements TicketService {
             
             // Update the associated case status to BLOCKED if a case is associated
             updateCaseStatusForTicketCreation(savedTicket);
+            
+            // Publish ticket created event
+            eventPublisher.publishEvent(new TicketCreatedEvent(savedTicket));
             
             return savedTicket;
         } catch (Exception e) {
@@ -302,6 +306,12 @@ public class TicketServiceImpl implements TicketService {
         // Check if the ticket is being resolved/closed
         if (status == Ticket.Status.RESOLVED && previousStatus != Ticket.Status.RESOLVED) {
             updateCaseStatusForTicketResolution(updatedTicket);
+            
+            // Publish ticket resolved event
+            eventPublisher.publishEvent(new TicketResolvedEvent(updatedTicket));
+        } else {
+            // Publish ticket updated event
+            eventPublisher.publishEvent(new TicketUpdatedEvent(updatedTicket));
         }
         
         return updatedTicket;
@@ -314,25 +324,26 @@ public class TicketServiceImpl implements TicketService {
             throw new EntityCreationException("Ticket", "Ticket not found");
         }
 
-        // Validate type-step combination if both are being updated
+        // Check for valid type-step combination
         if (ticketRequest.getType() != null && ticketRequest.getStep() != null) {
             if (!isValidTypeStepCombination(ticketRequest.getType(), ticketRequest.getStep())) {
                 throw new EntityCreationException("Ticket", "Invalid type-step combination: " +
                         ticketRequest.getType() + " cannot have step " + ticketRequest.getStep());
             }
-        } else if (ticketRequest.getType() != null && ticket.getStep() != null) {
-            // Type is being updated but step remains the same
-            if (!isValidTypeStepCombination(ticketRequest.getType(), ticket.getStep())) {
-                throw new EntityCreationException("Ticket", "Invalid type-step combination: " +
-                        ticketRequest.getType() + " cannot have step " + ticket.getStep());
-            }
         } else if (ticket.getType() != null && ticketRequest.getStep() != null) {
-            // Step is being updated but type remains the same
             if (!isValidTypeStepCombination(ticket.getType(), ticketRequest.getStep())) {
                 throw new EntityCreationException("Ticket", "Invalid type-step combination: " +
                         ticket.getType() + " cannot have step " + ticketRequest.getStep());
             }
+        } else if (ticketRequest.getType() != null && ticket.getStep() != null) {
+            if (!isValidTypeStepCombination(ticketRequest.getType(), ticket.getStep())) {
+                throw new EntityCreationException("Ticket", "Invalid type-step combination: " +
+                        ticketRequest.getType() + " cannot have step " + ticket.getStep());
+            }
         }
+
+        // Save old priority for comparison
+        Ticket.Priority oldPriority = ticket.getPriority();
 
         // Update only if provided fields are not null or empty
         if (ticketRequest.getSubject() != null && !ticketRequest.getSubject().trim().isEmpty()) {
@@ -368,7 +379,17 @@ public class TicketServiceImpl implements TicketService {
         }
 
         ticket.setUpdatedAt(LocalDateTime.now());
-        return saveTicket(ticket);
+        Ticket updatedTicket = saveTicket(ticket);
+        
+        // Check if priority was escalated
+        if (ticketRequest.getPriority() != null && ticketRequest.getPriority().ordinal() < oldPriority.ordinal()) {
+            eventPublisher.publishEvent(new TicketPriorityEscalatedEvent(updatedTicket, oldPriority, ticketRequest.getPriority()));
+        } else {
+            // Standard update notification
+            eventPublisher.publishEvent(new TicketUpdatedEvent(updatedTicket));
+        }
+        
+        return updatedTicket;
     }
 
     @Override
@@ -736,6 +757,16 @@ public class TicketServiceImpl implements TicketService {
             
             if (caseId != null) {
                 log.info("Updating case {} status to BLOCKED due to new ticket creation", caseId);
+                // Get case name
+                String caseName = "Unknown Case"; // Default fallback name
+                try {
+                    CaseResponse caseResponse = caseService.getCaseById(caseId);
+                    if (caseResponse != null && caseResponse.getName() != null) {
+                        caseName = caseResponse.getName();
+                    }
+                } catch (Exception e) {
+                    log.warn("Could not retrieve case name for case {}: {}", caseId, e.getMessage());
+                }
                 
                 // Create a case update DTO and set the status to BLOCKED
                 CaseUpdate caseUpdate = new CaseUpdate();
@@ -743,6 +774,9 @@ public class TicketServiceImpl implements TicketService {
                 
                 // Use the CaseService to update the case
                 caseService.updateCase(caseId, caseUpdate);
+                
+                // Publish case blocked event
+                eventPublisher.publishEvent(new CaseBlockedEvent(caseId, caseName, ticket.getId()));
                 
                 log.info("Successfully updated case {} status to BLOCKED", caseId);
             }
@@ -770,8 +804,7 @@ public class TicketServiceImpl implements TicketService {
             
             if (caseId != null) {
                 // Check if all tickets for this case are resolved before updating the case status
-                // TODO: check the validity of this method
-                if (areAllCaseTicketsResolved(caseId)) {
+                if (areAllCaseTicketsResolved(caseId, ticket.getId())) {
                     log.info("All tickets for case {} are resolved, updating status to ONGOING", caseId);
                     
                     // Create a case update DTO and set the status to ONGOING
@@ -807,15 +840,16 @@ public class TicketServiceImpl implements TicketService {
         return associatedCase != null ? associatedCase.getId() : null;
     }
     
-    /**
- * Checks if all tickets associated with a case are resolved.
+/**
+ * Checks if all tickets associated with a case are resolved, excluding a specific ticket.
  * 
  * @param caseId The case ID to check
- * @return true if all tickets are resolved, false otherwise
+ * @param currentTicketId The ID of the ticket to exclude from the check (usually the one just resolved)
+ * @return true if all tickets (except the excluded one) are resolved, false otherwise
  */
-private boolean areAllCaseTicketsResolved(UUID caseId) {
+private boolean areAllCaseTicketsResolved(UUID caseId, UUID currentTicketId) {
     try {
-        // Get all active tickets for this case
+        // Get all active tickets for this case, excluding the current ticket
         Specification<Ticket> spec = (root, query, cb) -> {
             // Join with acteTraitement to access its associatedCase
             Join<Ticket, Acte_traitement> actJoin = root.join("acteTraitement", JoinType.INNER);
@@ -825,7 +859,9 @@ private boolean areAllCaseTicketsResolved(UUID caseId) {
                 // Filter by case ID through the correct join path
                 cb.equal(caseJoin.get("id"), caseId),
                 // Exclude already resolved tickets
-                cb.notEqual(root.get("status"), Ticket.Status.RESOLVED)
+                cb.notEqual(root.get("status"), Ticket.Status.RESOLVED),
+                // Exclude the current ticket being processed
+                cb.notEqual(root.get("id"), currentTicketId)
             );
         };
         

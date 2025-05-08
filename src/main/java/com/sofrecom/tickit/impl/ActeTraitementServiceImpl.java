@@ -224,7 +224,6 @@ public class ActeTraitementServiceImpl implements ActeTraitementService {
      */
     @Override
     public int getNumberOfStepsByCaseId(UUID caseId) {
-        // TODO: we can move this to somewhere else if needed
         List<LedgerEntry> createEntries = ledgerService.getLedgerForCase(
                 caseId.toString(), 
                 "TREATMENT_ACT"

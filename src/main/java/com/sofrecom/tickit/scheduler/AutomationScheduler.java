@@ -45,4 +45,24 @@ public class AutomationScheduler {
         log.info("Running scheduled task: Response SLA breach detection");
         automationService.processResponseSlaBreaches();
     }
+    
+    /**
+     * Scheduled task to check for approaching due dates on treatment acts.
+     * Sends notifications for treatment acts that are due within 4 days.
+     */
+    @Scheduled(cron = "${tickit.automation.dueDateCheckSchedule:0 0 8 * * *}") // Default: 8 AM daily
+    public void checkApproachingDueDates() {
+        log.info("Running scheduled task: Due date approaching check");
+        automationService.processApproachingDueDates();
+    }
+
+    /**
+     * Scheduled task to check for stalled activities.
+     * Sends notifications for activities that have not been updated for 3+ days.
+     */
+    @Scheduled(cron = "${tickit.automation.stalledActivityCheckSchedule:0 0 9 */3 * *}") // Default: every 3 days at 9 AM
+    public void checkStalledActivities() {
+        log.info("Running scheduled task: Stalled activity check");
+        automationService.processStalledActivities();
+    }
 }

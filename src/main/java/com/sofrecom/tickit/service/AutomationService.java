@@ -4,12 +4,21 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.sofrecom.tickit.config.AutomationProperties;
 import com.sofrecom.tickit.dto.*;
 import com.sofrecom.tickit.exception.EntityCreationException;
+import com.sofrecom.tickit.listener.SlaBreachEvent;
+import com.sofrecom.tickit.listener.TicketPriorityEscalatedEvent;
+import com.sofrecom.tickit.listener.DueDateApproachingEvent;
+import com.sofrecom.tickit.listener.ActivityStalledEvent;
+
 import com.sofrecom.tickit.mapper.TicketMapper;
 import com.sofrecom.tickit.model.Case;
 import com.sofrecom.tickit.model.LedgerEntry;
 import com.sofrecom.tickit.model.Ticket;
+import com.sofrecom.tickit.model.TicketActivity;
+import com.sofrecom.tickit.repository.TicketActivityRepository;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -22,6 +31,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.time.Duration;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +42,8 @@ public class AutomationService {
     private final LedgerService ledgerService;
     private final TicketMapper ticketMapper;
     private final AutomationProperties properties;
+    private final ApplicationEventPublisher eventPublisher;
+    private final TicketActivityRepository ticketActivityRepository;
     
     /**
      * Processes overdue cases by checking treatment acts via the blockchain ledger.
@@ -140,9 +152,19 @@ public class AutomationService {
                     log.info("Ticket {} has breached resolution SLA. Escalating priority from {} to {}", 
                             ticket.getId(), ticket.getPriority(), escalateTicketPriority(ticket.getPriority()));
                     
+                    // Store old priority for the event
+                    Ticket.Priority oldPriority = ticket.getPriority();
+                    Ticket.Priority newPriority = escalateTicketPriority(oldPriority);
+                    
                     // Update ticket priority
                     escalateTicketPriority(ticket);
                     escalatedCount++;
+                    
+                    // Publish SLA breach event
+                    eventPublisher.publishEvent(new SlaBreachEvent(ticket, "resolution"));
+                    
+                    // Publish priority escalated event
+                    eventPublisher.publishEvent(new TicketPriorityEscalatedEvent(ticket, oldPriority, newPriority));
                 }
             } catch (Exception e) {
                 log.error("Error processing ticket {} for resolution SLA: {}", 
@@ -181,9 +203,19 @@ public class AutomationService {
                     log.info("Ticket {} has breached response SLA. Escalating priority from {} to {}", 
                             ticket.getId(), ticket.getPriority(), escalateTicketPriority(ticket.getPriority()));
                     
+                    // Store old priority for the event
+                    Ticket.Priority oldPriority = ticket.getPriority();
+                    Ticket.Priority newPriority = escalateTicketPriority(oldPriority);
+                    
                     // Update ticket priority
                     escalateTicketPriority(ticket);
                     escalatedCount++;
+                    
+                    // Publish SLA breach event
+                    eventPublisher.publishEvent(new SlaBreachEvent(ticket, "response"));
+                    
+                    // Publish priority escalated event
+                    eventPublisher.publishEvent(new TicketPriorityEscalatedEvent(ticket, oldPriority, newPriority));
                 }
             } catch (Exception e) {
                 log.error("Error processing ticket {} for response SLA: {}", 
@@ -192,6 +224,137 @@ public class AutomationService {
         }
         
         log.info("Completed response SLA check. Tickets escalated: {}", escalatedCount);
+    }
+    
+    /**
+     * Processes approaching due dates for treatment acts.
+     * Sends notifications for acts that are due within configured days.
+     */
+    public void processApproachingDueDates() {
+        log.info("Starting due date approaching check");
+        
+        // Find all active cases
+        List<CaseResponse> activeCases = caseService.getAllCases().stream()
+            .filter(caseResponse -> caseResponse.getStatus() == Case.Status.ONGOING)
+            .collect(Collectors.toList());
+        
+        log.info("Found {} active cases to check", activeCases.size());
+        
+        LocalDateTime now = LocalDateTime.now();
+        int notifiedCount = 0;
+        
+        // Configure warning threshold (default: 4 days)
+        int warningThresholdDays = 4;
+        
+        for (CaseResponse caseResponse : activeCases) {
+            try {
+                // Get ledger entries for treatment acts of this case
+                List<LedgerEntry> ledgerEntries = ledgerService.getLedgerForCase(
+                    caseResponse.getId().toString(), "TREATMENT_ACT").stream()
+                    .filter(entry -> entry.getActionType() == LedgerEntry.ActionType.CREATE)
+                    .collect(Collectors.toList());
+                
+                if (ledgerEntries.isEmpty()) {
+                    continue; // Skip cases with no treatment acts
+                }
+                
+                // Find the latest treatment act entry
+                LedgerEntry latestEntry = ledgerEntries.stream()
+                    .sorted(Comparator.comparing(LedgerEntry::getTimestamp).reversed())
+                    .findFirst()
+                    .orElse(null);
+                
+                if (latestEntry == null) {
+                    continue;
+                }
+                
+                // Extract the creation date and duration
+                LocalDateTime createdAt = extractCreationDate(latestEntry);
+                if (createdAt == null) {
+                    continue;
+                }
+                
+                int durationDays = extractDuration(latestEntry.getDataSnapshot());
+                
+                // Calculate the due date
+                LocalDateTime dueDate = createdAt.plusDays(durationDays);
+                
+                // Calculate days remaining until due date
+                long daysRemaining = java.time.Duration.between(now, dueDate).toDays();
+                
+                // Check if due date is approaching (within warning threshold)
+                if (daysRemaining > 0 && daysRemaining <= warningThresholdDays) {
+                    log.info("Due date approaching for case {}: {} days remaining", 
+                            caseResponse.getId(), daysRemaining);
+                    
+                    // Publish due date approaching event
+                    eventPublisher.publishEvent(new DueDateApproachingEvent(
+                            caseResponse.getId(),
+                            caseResponse.getName(),
+                            latestEntry.getEntityId(),
+                            (int) daysRemaining
+                    ));
+                    
+                    notifiedCount++;
+                }
+            } catch (Exception e) {
+                log.error("Error processing case {} for due date check: {}", 
+                        caseResponse.getId(), e.getMessage(), e);
+            }
+        }
+        
+        log.info("Completed due date approaching check. Cases with approaching due dates: {}", notifiedCount);
+    }
+    
+    /**
+     * Processes activities to find those that have stalled.
+     * An activity is considered stalled if it's not completed after a threshold period.
+     */
+    public void processStalledActivities() {
+        log.info("Starting stalled activity check");
+        
+        // Configure stalled threshold (default: 3 days)
+        int stalledThresholdDays = 3;
+        
+        // Get the cutoff date
+        LocalDateTime cutoffDate = LocalDateTime.now().minusDays(stalledThresholdDays);
+        
+        // Find all incomplete activities older than the threshold
+        List<TicketActivity> stalledActivities = ticketActivityRepository.findStalledActivities(cutoffDate);
+        
+        log.info("Found {} potentially stalled activities", stalledActivities.size());
+        
+        int notifiedCount = 0;
+        
+        for (TicketActivity activity : stalledActivities) {
+            try {
+                // Calculate days since last update
+                LocalDateTime starTime = activity.getStartTime() != null ? 
+                        activity.getStartTime() : activity.getCreatedAt();
+                
+                
+                long daysSinceStart = Duration.between(starTime, LocalDateTime.now()).toDays();
+                
+                log.info("Activity {} on ticket {} has been stalled for {} days", 
+                        activity.getId(), activity.getTicket().getId(), daysSinceStart);
+                
+                // Publish activity stalled event
+                eventPublisher.publishEvent(new ActivityStalledEvent(
+                        activity.getTicket().getId(),
+                        activity.getId(),
+                        activity.getType().name(),
+                        activity.getUsername(),
+                        (int) daysSinceStart
+                ));
+                
+                notifiedCount++;
+            } catch (Exception e) {
+                log.error("Error processing stalled activity {}: {}", 
+                        activity.getId(), e.getMessage(), e);
+            }
+        }
+        
+        log.info("Completed stalled activity check. Notified for {} activities", notifiedCount);
     }
     
     /**
@@ -269,6 +432,7 @@ public class AutomationService {
                     } catch (DateTimeParseException e4) {
                         try {
                             // 5. Last resort: try to parse using java.util.Date and convert
+                            @SuppressWarnings("deprecation")
                             Date date = new Date(dateStr);
                             return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
                         } catch (Exception e5) {
