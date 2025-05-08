@@ -54,4 +54,14 @@ public interface TicketActivityService {
             int size,
             String sortField,
             String sortDir);
+
+    /**
+     * Get a specific activity by its ID.
+     *
+     * @param ticketId UUID of the ticket
+     * @param activityId ID of the activity
+     * @return The activity response
+     * @throws ResourceNotFoundException if activity not found
+     */
+    TicketActivityResponse getActivityById(UUID ticketId, Long activityId);
 }

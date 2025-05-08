@@ -237,6 +237,33 @@ public class TicketActivityController {
         
         return ResponseEntity.ok(response);
     }
+
+    /**
+     * Retrieves a specific ticket activity by its identifier.
+     *
+     * @param ticketId the UUID of the ticket
+     * @param activityId the ID of the activity to retrieve
+     * @return a response entity with the activity details
+     */
+    @GetMapping("/{activityId}")
+    @Operation(summary = "Get ticket activity by ID", 
+              description = "Retrieves a specific ticket activity by its identifier")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", 
+                    description = "Activity found successfully", 
+                    content = @Content(schema = @Schema(implementation = TicketActivityResponse.class))),
+        @ApiResponse(responseCode = "404", 
+                    description = "Ticket or activity not found")
+    })
+    public ResponseEntity<TicketActivityResponse> getById(
+            @Parameter(description = "Unique identifier of the ticket", required = true)
+            @PathVariable UUID ticketId,
+            @Parameter(description = "Unique identifier of the activity", required = true)
+            @PathVariable Long activityId) {
+        
+        TicketActivityResponse activity = service.getActivityById(ticketId, activityId);
+        return ResponseEntity.ok(activity);
+    }
     
     // Helper class for OpenAPI documentation
     @Schema(name = "PaginatedTicketActivityResponse")

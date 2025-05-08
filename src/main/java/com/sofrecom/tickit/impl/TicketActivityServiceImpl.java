@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import com.sofrecom.tickit.dto.TicketActivityRequest;
 import com.sofrecom.tickit.dto.TicketActivityResponse;
 import com.sofrecom.tickit.exception.InvalidSortParameterException;
+import com.sofrecom.tickit.exception.ResourceNotFoundException;
 import com.sofrecom.tickit.model.Ticket;
 import com.sofrecom.tickit.model.TicketActivity;
 import com.sofrecom.tickit.model.TicketActivity.ActivityType;
@@ -19,7 +20,7 @@ import com.sofrecom.tickit.repository.TicketRepository;
 import com.sofrecom.tickit.service.TicketActivityService;
 
 import javax.persistence.EntityNotFoundException;
-import javax.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.Duration;
@@ -126,6 +127,14 @@ public class TicketActivityServiceImpl implements TicketActivityService {
         
         // Map to DTOs
         return activityPage.map(this::toResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public TicketActivityResponse getActivityById(UUID ticketId, Long activityId) {
+        TicketActivity activity = activityRepo.findByIdAndTicket_Id(activityId, ticketId)
+                .orElseThrow(() -> new ResourceNotFoundException("Activity", "ID", activityId));
+        return toResponse(activity);
     }
 
     /**
