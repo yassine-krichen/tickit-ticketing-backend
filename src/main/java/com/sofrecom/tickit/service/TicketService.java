@@ -27,7 +27,7 @@ public interface TicketService {
     List<Ticket> searchTickets(Ticket.Status status, Ticket.Priority priority, String issuedBy, 
                               String acteTraitement, CaseType type, CaseType step, String subStatus);
 
-    Ticket updateTicketStatus(UUID ticketId, Ticket.Status status) throws EntityCreationException;
+    Ticket updateTicketStatus(UUID ticketId, Ticket.Status status, String userFingerprint) throws EntityCreationException;
 
     Ticket updateTicket(UUID ticketId, TicketUpdateDTO ticketRequest) throws EntityCreationException;
 

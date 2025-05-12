@@ -303,7 +303,7 @@ public class TicketServiceImpl implements TicketService {
      */
     @Override
     @Transactional
-    public Ticket updateTicketStatus(UUID ticketId, Ticket.Status status) throws EntityCreationException {
+    public Ticket updateTicketStatus(UUID ticketId, Ticket.Status status, String userFingerprint) throws EntityCreationException {
         Ticket ticket = getTicketById(ticketId);
         if (ticket == null) {
             throw new EntityCreationException("Ticket", "Ticket not found");
@@ -326,7 +326,7 @@ public class TicketServiceImpl implements TicketService {
         } else if (status == Ticket.Status.CLOSED && previousStatus != Ticket.Status.CLOSED) {
             // create new ticket activity to be added to the ticket
             TicketActivityRequest actReq = new TicketActivityRequest();
-            actReq.setUsername(authUtils.getUsernameFromFingerprint(ticket.getIssuedBy())); // change with auth utils TODO
+            actReq.setUsername(authUtils.getUsernameFromFingerprint(userFingerprint)); // change with auth utils TODO
             actReq.setType(TicketActivity.ActivityType.CLOSE);
             actReq.setDescription("Ticket closed");
             ticketActivityService.createActivity(ticketId, actReq);
@@ -335,7 +335,7 @@ public class TicketServiceImpl implements TicketService {
         } else if (status == Ticket.Status.OPEN && previousStatus != Ticket.Status.OPEN) {
             // create new ticket activity to be added to the ticket
             TicketActivityRequest actReq = new TicketActivityRequest();
-            actReq.setUsername(authUtils.getUsernameFromFingerprint(ticket.getIssuedBy())); // change with auth utils TODO
+            actReq.setUsername(authUtils.getUsernameFromFingerprint(userFingerprint)); // change with auth utils TODO
             actReq.setType(TicketActivity.ActivityType.OPEN);
             actReq.setDescription("Ticket opened");
             ticketActivityService.createActivity(ticketId, actReq);
@@ -397,7 +397,8 @@ public class TicketServiceImpl implements TicketService {
             ticket.setPriority(ticketRequest.getPriority());
         }
         if (ticketRequest.getStatus() != null) {
-            ticket.setStatus(ticketRequest.getStatus());
+            // ticket.setStatus(ticketRequest.getStatus());
+            updateTicketStatus(ticketId, ticketRequest.getStatus(), ticketRequest.getIssuedBy());
         }
         if (ticketRequest.getIssuedBy() != null && !ticketRequest.getIssuedBy().trim().isEmpty()) {
             ticket.setIssuedBy(ticketRequest.getIssuedBy());
