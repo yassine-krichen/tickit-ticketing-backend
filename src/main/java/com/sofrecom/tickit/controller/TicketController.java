@@ -329,7 +329,7 @@ public class TicketController {
             @Parameter(description = "New status value", required = true) 
             @RequestParam Ticket.Status status) {
         try {
-            Ticket updatedTicket = ticketService.updateTicketStatus(ticketId, status);
+            Ticket updatedTicket = ticketService.updateTicketStatus(ticketId, status, null);
             TicketResponse response = ticketMapper.toResponse(updatedTicket);
             response.setStatusMessage("SUCCESS");
             response.setMessage("Ticket status updated successfully");

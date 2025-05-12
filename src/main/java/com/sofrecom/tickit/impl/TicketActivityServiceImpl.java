@@ -1,6 +1,5 @@
 package com.sofrecom.tickit.impl;
 
-import org.apache.poi.ss.formula.functions.T;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -19,7 +18,7 @@ import com.sofrecom.tickit.repository.TicketActivityRepository;
 import com.sofrecom.tickit.repository.TicketActivitySpecification;
 import com.sofrecom.tickit.repository.TicketRepository;
 import com.sofrecom.tickit.service.TicketActivityService;
-import com.sofrecom.tickit.service.TicketService;
+import org.springframework.context.ApplicationEventPublisher;
 
 import javax.persistence.EntityNotFoundException;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,11 +29,19 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
+import com.sofrecom.tickit.listener.ActivityCreatedEvent;
+import lombok.RequiredArgsConstructor;
+
+/**
+ * Implementation of the TicketActivityService interface.
+ * Manages the lifecycle of ticket activities.
+ */
 @Service
+@RequiredArgsConstructor
 public class TicketActivityServiceImpl implements TicketActivityService {
     private final TicketActivityRepository activityRepo;
     private final TicketRepository ticketRepo;
-    private final TicketService ticketService;
+    private final ApplicationEventPublisher eventPublisher;
     
     // Define allowed sort fields
     private static final List<String> ALLOWED_SORT_FIELDS = Arrays.asList(
@@ -43,13 +50,6 @@ public class TicketActivityServiceImpl implements TicketActivityService {
             "type",
             "username"
     );
-
-    public TicketActivityServiceImpl(TicketActivityRepository activityRepo,
-                                     TicketRepository ticketRepo, TicketService ticketService) {
-        this.ticketService = ticketService;
-        this.activityRepo = activityRepo;
-        this.ticketRepo = ticketRepo;
-    }
 
     @Override
     @Transactional
@@ -63,10 +63,14 @@ public class TicketActivityServiceImpl implements TicketActivityService {
         entity.setType(request.getType());
         entity.setDescription(request.getDescription().trim());
         activityRepo.save(entity);
-        // update ticket status to in-progress if type act !(open, close, update)
-        if (request.getType() != ActivityType.OPEN && request.getType() != ActivityType.CLOSE && request.getType() != ActivityType.UPDATE) {
-            ticketService.updateTicketStatus(ticketId, Ticket.Status.IN_PROGRESS, null);
+        
+        // Instead of directly updating ticket status, publish an event
+        if (request.getType() != ActivityType.OPEN && 
+            request.getType() != ActivityType.CLOSE && 
+            request.getType() != ActivityType.UPDATE) {
+            eventPublisher.publishEvent(new ActivityCreatedEvent(entity));
         }
+        
         return toResponse(entity);
     }
 

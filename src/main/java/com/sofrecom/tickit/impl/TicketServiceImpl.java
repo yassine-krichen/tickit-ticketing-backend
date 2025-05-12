@@ -24,6 +24,7 @@ import com.sofrecom.tickit.util.AuthUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -873,38 +874,73 @@ public class TicketServiceImpl implements TicketService {
         return associatedCase != null ? associatedCase.getId() : null;
     }
     
-/**
- * Checks if all tickets associated with a case are resolved, excluding a specific ticket.
- * 
- * @param caseId The case ID to check
- * @param currentTicketId The ID of the ticket to exclude from the check (usually the one just resolved)
- * @return true if all tickets (except the excluded one) are resolved, false otherwise
- */
-private boolean areAllCaseTicketsResolved(UUID caseId, UUID currentTicketId) {
-    try {
-        // Get all active tickets for this case, excluding the current ticket
-        Specification<Ticket> spec = (root, query, cb) -> {
-            // Join with acteTraitement to access its associatedCase
-            Join<Ticket, Acte_traitement> actJoin = root.join("acteTraitement", JoinType.INNER);
-            Join<Acte_traitement, Case> caseJoin = actJoin.join("associatedCase", JoinType.INNER);
+    /**
+     * Checks if all tickets associated with a case are resolved, excluding a specific ticket.
+     * 
+     * @param caseId The case ID to check
+     * @param currentTicketId The ID of the ticket to exclude from the check (usually the one just resolved)
+     * @return true if all tickets (except the excluded one) are resolved, false otherwise
+     */
+    private boolean areAllCaseTicketsResolved(UUID caseId, UUID currentTicketId) {
+        try {
+            // Get all active tickets for this case, excluding the current ticket
+            Specification<Ticket> spec = (root, query, cb) -> {
+                // Join with acteTraitement to access its associatedCase
+                Join<Ticket, Acte_traitement> actJoin = root.join("acteTraitement", JoinType.INNER);
+                Join<Acte_traitement, Case> caseJoin = actJoin.join("associatedCase", JoinType.INNER);
+                
+                return cb.and(
+                    // Filter by case ID through the correct join path
+                    cb.equal(caseJoin.get("id"), caseId),
+                    // Exclude already resolved tickets
+                    cb.notEqual(root.get("status"), Ticket.Status.RESOLVED),
+                    // Exclude the current ticket being processed
+                    cb.notEqual(root.get("id"), currentTicketId)
+                );
+            };
             
-            return cb.and(
-                // Filter by case ID through the correct join path
-                cb.equal(caseJoin.get("id"), caseId),
-                // Exclude already resolved tickets
-                cb.notEqual(root.get("status"), Ticket.Status.RESOLVED),
-                // Exclude the current ticket being processed
-                cb.notEqual(root.get("id"), currentTicketId)
-            );
-        };
-        
-        // If we find any non-resolved tickets, return false
-        long unresolved = ticketRepository.count(spec);
-        return unresolved == 0;
-    } catch (Exception e) {
-        log.warn("Error checking if all tickets are resolved for case {}: {}", caseId, e.getMessage());
-        // Default to false if we can't determine for sure
-        return false;
+            // If we find any non-resolved tickets, return false
+            long unresolved = ticketRepository.count(spec);
+            return unresolved == 0;
+        } catch (Exception e) {
+            log.warn("Error checking if all tickets are resolved for case {}: {}", caseId, e.getMessage());
+            // Default to false if we can't determine for sure
+            return false;
+        }
     }
-}
+
+    /**
+     * Event listener that handles activity creation events.
+     * Updates ticket status to IN_PROGRESS when appropriate activities are created.
+     * 
+     * @param event The activity created event
+     */
+    @EventListener
+    @Transactional
+    public void handleActivityCreatedEvent(ActivityCreatedEvent event) {
+        TicketActivity activity = event.getActivity();
+        Ticket ticket = activity.getTicket();
+        
+        // Skip if ticket is already RESOLVED or CLOSED
+        if (ticket.getStatus() == Ticket.Status.RESOLVED || 
+            ticket.getStatus() == Ticket.Status.CLOSED) {
+            return;
+        }
+        
+        // Update ticket status to IN_PROGRESS for work activities
+        if (activity.getType() != TicketActivity.ActivityType.OPEN && 
+            activity.getType() != TicketActivity.ActivityType.CLOSE && 
+            activity.getType() != TicketActivity.ActivityType.UPDATE) {
+            
+            log.info("Automatically updating ticket {} to IN_PROGRESS due to activity creation", 
+                    ticket.getId());
+            
+            ticket.setStatus(Ticket.Status.IN_PROGRESS);
+            ticket.setUpdatedAt(LocalDateTime.now());
+            ticketRepository.save(ticket);
+            
+            // Publish event for the status change
+            eventPublisher.publishEvent(new TicketUpdatedEvent(ticket));
+        }
+    }
 }
