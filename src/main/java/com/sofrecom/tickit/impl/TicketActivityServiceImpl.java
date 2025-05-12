@@ -1,5 +1,6 @@
 package com.sofrecom.tickit.impl;
 
+import org.apache.poi.ss.formula.functions.T;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -18,6 +19,7 @@ import com.sofrecom.tickit.repository.TicketActivityRepository;
 import com.sofrecom.tickit.repository.TicketActivitySpecification;
 import com.sofrecom.tickit.repository.TicketRepository;
 import com.sofrecom.tickit.service.TicketActivityService;
+import com.sofrecom.tickit.service.TicketService;
 
 import javax.persistence.EntityNotFoundException;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +34,7 @@ import java.util.UUID;
 public class TicketActivityServiceImpl implements TicketActivityService {
     private final TicketActivityRepository activityRepo;
     private final TicketRepository ticketRepo;
+    private final TicketService ticketService;
     
     // Define allowed sort fields
     private static final List<String> ALLOWED_SORT_FIELDS = Arrays.asList(
@@ -42,7 +45,8 @@ public class TicketActivityServiceImpl implements TicketActivityService {
     );
 
     public TicketActivityServiceImpl(TicketActivityRepository activityRepo,
-                                     TicketRepository ticketRepo) {
+                                     TicketRepository ticketRepo, TicketService ticketService) {
+        this.ticketService = ticketService;
         this.activityRepo = activityRepo;
         this.ticketRepo = ticketRepo;
     }
@@ -59,6 +63,10 @@ public class TicketActivityServiceImpl implements TicketActivityService {
         entity.setType(request.getType());
         entity.setDescription(request.getDescription().trim());
         activityRepo.save(entity);
+        // update ticket status to in-progress if type act !(open, close, update)
+        if (request.getType() != ActivityType.OPEN && request.getType() != ActivityType.CLOSE && request.getType() != ActivityType.UPDATE) {
+            ticketService.updateTicketStatus(ticketId, Ticket.Status.IN_PROGRESS, null);
+        }
         return toResponse(entity);
     }
 
