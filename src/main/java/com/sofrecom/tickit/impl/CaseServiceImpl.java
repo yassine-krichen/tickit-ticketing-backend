@@ -1,14 +1,21 @@
 package com.sofrecom.tickit.impl;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.sofrecom.tickit.dto.CaseRequest;
 import com.sofrecom.tickit.dto.CaseResponse;
 import com.sofrecom.tickit.dto.CaseUpdate;
 import com.sofrecom.tickit.exception.EntityCreationException;
 import com.sofrecom.tickit.exception.ResourceNotFoundException;
 import com.sofrecom.tickit.model.Case;
+import com.sofrecom.tickit.model.LedgerEntry;
 import com.sofrecom.tickit.repository.CaseRepository;
 import com.sofrecom.tickit.service.CaseService;
+import com.sofrecom.tickit.service.LedgerService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -16,15 +23,15 @@ import java.util.stream.Collectors;
 
 /**
  * Implementation of the CaseService interface.
+ * Manages the lifecycle of cases including creation, retrieval, updates, and deletion.
  */
 @Service
+@RequiredArgsConstructor
 public class CaseServiceImpl implements CaseService {
 
     private final CaseRepository caseRepository;
-
-    public CaseServiceImpl(CaseRepository caseRepository) {
-        this.caseRepository = caseRepository;
-    }
+    private final LedgerService ledgerService;
+    private final ObjectMapper objectMapper;
 
     @Override
     public CaseResponse createCase(CaseRequest createCaseRequest) {
@@ -43,6 +50,7 @@ public class CaseServiceImpl implements CaseService {
 
         try {
             Case savedCase = caseRepository.save(newCase);
+            createCaseLedgerEntry(savedCase, LedgerEntry.ActionType.CREATE, createCaseRequest.getCreatedBy());
             return mapToResponse(savedCase);
         } catch (Exception ex) {
             throw new EntityCreationException("Case", "Unable to create case", ex);
@@ -90,6 +98,56 @@ public class CaseServiceImpl implements CaseService {
             () -> new ResourceNotFoundException("Case", "id", id)
         );
         caseRepository.delete(existingCase);
+    }
+
+    /**
+     * Create a blockchain ledger entry for a case operation.
+     *
+     * @param caseEntity Case entity
+     * @param actionType Type of action (CREATE, UPDATE, DELETE)
+     * @param userFingerprint User identifier
+     */
+    private void createCaseLedgerEntry(Case caseEntity, LedgerEntry.ActionType actionType, String userFingerprint) {
+        // Create JSON snapshot of current case state
+        JsonNode dataSnapshot = createCaseJsonSnapshot(caseEntity);
+        
+        // Create ledger entry
+        LedgerEntry ledgerEntry = LedgerEntry.builder()
+                .id(UUID.randomUUID())
+                .timestamp(LocalDateTime.now())
+                .userFingerprint(userFingerprint)
+                .actionType(actionType)
+                .entityType("CASE")
+                .entityId(caseEntity.getId().toString())
+                .caseId(caseEntity.getId().toString())
+                .dataSnapshot(dataSnapshot)
+                .build();
+        
+        // Use the ledger service to save the entry with proper hash calculation
+        ledgerService.saveLedgerEntry(ledgerEntry);
+    }
+
+    /**
+     * Create a JSON representation of a case.
+     *
+     * @param caseEntity Case entity
+     * @return JsonNode representing the entity state
+     */
+    private JsonNode createCaseJsonSnapshot(Case caseEntity) {
+        ObjectNode node = objectMapper.createObjectNode();
+        
+        node.put("id", caseEntity.getId().toString());
+        node.put("name", caseEntity.getName());
+        node.put("description", caseEntity.getDescription());
+        node.put("type", caseEntity.getType().toString());
+        node.put("status", caseEntity.getStatus().toString());
+        node.put("priority", caseEntity.getPriority().toString());
+        node.put("team", caseEntity.getTeam().toString());
+        node.put("createdAt", caseEntity.getCreatedAt().toString());
+        node.put("createdBy", caseEntity.getCreatedBy());
+        node.put("updatedAt", caseEntity.getUpdatedAt().toString());
+        
+        return node;
     }
 
     /**

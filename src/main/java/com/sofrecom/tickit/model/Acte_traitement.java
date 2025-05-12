@@ -103,7 +103,6 @@ public class Acte_traitement {
     public void setAssociatedCase(Case associatedCase) {
         this.associatedCase = associatedCase;
     }
-    // TODO: see how to fit in the associatedCase in the constructor
 
     public Acte_traitement(Date dateReception, Date dateLivraison, Date dateValidation,
                            String affectation, int duree, String commentaire, String motif,

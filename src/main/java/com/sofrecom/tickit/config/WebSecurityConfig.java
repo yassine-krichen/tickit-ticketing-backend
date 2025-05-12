@@ -102,6 +102,12 @@ public class WebSecurityConfig {
 				.antMatchers("/api/v1/test/**").permitAll()
 				.antMatchers("/v1/collaborateur/**").permitAll()
 				.antMatchers("/api/v1/attachements/**").permitAll()
+				 // Allow WebSocket connection endpoints without authentication
+				.antMatchers("/ws/**").permitAll()
+				.antMatchers("/ws").permitAll()
+				.antMatchers("/ws/info").permitAll()
+				.antMatchers("/ws/info/**").permitAll()
+				.antMatchers("/ws/**/**").permitAll()
 				// Swagger UI & OpenAPI configuration
 				.antMatchers("/swagger-ui/**").permitAll()
 				.antMatchers("/api-docs/**").permitAll()

@@ -9,8 +9,10 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.PagingAndSortingRepository;
+import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -69,4 +71,15 @@ public interface TicketActivityRepository extends
     @Transactional
     @Query("DELETE FROM TicketActivity a WHERE a.deleted = true AND a.deletedAt < :threshold")
     void deleteAllSoftDeletedBefore(LocalDateTime threshold);
+
+    /**
+     * Finds activities that have been started but not completed for longer than the specified cutoff date.
+     * An activity is considered stalled when it has been started but not completed, and the start time
+     * exceeds the cutoff threshold.
+     *
+     * @param cutoffDate Activities started before this date and still not completed are considered stalled
+     * @return List of stalled activities
+     */
+    @Query("SELECT a FROM TicketActivity a WHERE a.endTime IS NULL AND a.startTime < :cutoffDate AND a.deleted = false")
+    List<TicketActivity> findStalledActivities(@Param("cutoffDate") LocalDateTime cutoffDate);
 }
