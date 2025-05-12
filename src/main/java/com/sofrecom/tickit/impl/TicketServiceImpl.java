@@ -337,7 +337,7 @@ public class TicketServiceImpl implements TicketService {
             TicketActivityRequest actReq = new TicketActivityRequest();
             actReq.setUsername(authUtils.getUsernameFromFingerprint(userFingerprint)); // change with auth utils TODO
             actReq.setType(TicketActivity.ActivityType.OPEN);
-            actReq.setDescription("Ticket opened");
+            actReq.setDescription("Ticket re-opened");
             ticketActivityService.createActivity(ticketId, actReq);
 
             eventPublisher.publishEvent(new TicketUpdatedEvent(updatedTicket));
