@@ -327,7 +327,7 @@ public class TicketServiceImpl implements TicketService {
         } else if (status == Ticket.Status.CLOSED && previousStatus != Ticket.Status.CLOSED) {
             // create new ticket activity to be added to the ticket
             TicketActivityRequest actReq = new TicketActivityRequest();
-            actReq.setUsername(authUtils.getUsernameFromFingerprint(userFingerprint)); // change with auth utils TODO
+            actReq.setUsername(authUtils.getUsernameFromFingerprint(userFingerprint));
             actReq.setType(TicketActivity.ActivityType.CLOSE);
             actReq.setDescription("Ticket closed");
             ticketActivityService.createActivity(ticketId, actReq);
@@ -336,7 +336,7 @@ public class TicketServiceImpl implements TicketService {
         } else if (status == Ticket.Status.OPEN && previousStatus != Ticket.Status.OPEN) {
             // create new ticket activity to be added to the ticket
             TicketActivityRequest actReq = new TicketActivityRequest();
-            actReq.setUsername(authUtils.getUsernameFromFingerprint(userFingerprint)); // change with auth utils TODO
+            actReq.setUsername(authUtils.getUsernameFromFingerprint(userFingerprint));
             actReq.setType(TicketActivity.ActivityType.OPEN);
             actReq.setDescription("Ticket re-opened");
             ticketActivityService.createActivity(ticketId, actReq);

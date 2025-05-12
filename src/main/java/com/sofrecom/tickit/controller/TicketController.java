@@ -329,7 +329,8 @@ public class TicketController {
             @Parameter(description = "New status value", required = true) 
             @RequestParam Ticket.Status status) {
         try {
-            Ticket updatedTicket = ticketService.updateTicketStatus(ticketId, status, null);
+            String userFingerprint = authUtils.generateUserFingerprint();
+            Ticket updatedTicket = ticketService.updateTicketStatus(ticketId, status, userFingerprint);
             TicketResponse response = ticketMapper.toResponse(updatedTicket);
             response.setStatusMessage("SUCCESS");
             response.setMessage("Ticket status updated successfully");
@@ -364,11 +365,13 @@ public class TicketController {
         try {
             // Get authenticated user information
             String issuedBy = authUtils.generateUserFingerprint();
-            
+            // log with logger the user fingerprint for debugging (not using system.out.println)
+            // logger.info("User fingerprint: " + issuedBy);
+
             // Set the issuedBy field if the client is trying to update it
-            if (request.getIssuedBy() != null) {
+            
                 request.setIssuedBy(issuedBy);
-            }
+            
             
             Ticket updatedTicket = ticketService.updateTicket(ticketId, request);
             TicketResponse response = ticketMapper.toResponse(updatedTicket);
