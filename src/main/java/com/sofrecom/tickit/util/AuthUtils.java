@@ -139,4 +139,58 @@ public class AuthUtils {
         }
         return "Something Weird is going on";
     }
+    /**
+     * Converts a user fingerprint back to a username format.
+     * 
+     * @param fingerprint The user fingerprint in the format last_name.first_name.role.team
+     * @return The username in the format "First Name Last Name", or "Unknown User" if fingerprint is invalid
+     */
+    public String getUsernameFromFingerprint(String fingerprint) {
+        if (fingerprint == null || fingerprint.trim().isEmpty()) {
+            return "Unknown User";
+        }
+        
+        String[] parts = fingerprint.split("\\.");
+        
+        if (parts.length < 2) {
+            return "Unknown User";
+        }
+        
+        String lastName = parts[0];
+        String firstName = parts[1];
+        
+        if ("system".equals(lastName) || "unknown".equals(lastName)) {
+            return "System User";
+        }
+        
+        firstName = capitalizeFirstLetter(firstName.replace("_", " "));
+        lastName = capitalizeFirstLetter(lastName.replace("_", " "));
+        
+        return String.format("%s %s", firstName, lastName);
+    }
+
+    /**
+     * Capitalizes the first letter of each word in a string.
+     * 
+     * @param input The input string
+     * @return The string with the first letter of each word capitalized
+     */
+    private String capitalizeFirstLetter(String input) {
+        if (input == null || input.isEmpty()) {
+            return input;
+        }
+        
+        StringBuilder result = new StringBuilder();
+        String[] words = input.split("\\s");
+        
+        for (String word : words) {
+            if (word.length() > 0) {
+                result.append(Character.toUpperCase(word.charAt(0)))
+                      .append(word.substring(1).toLowerCase())
+                      .append(" ");
+            }
+        }
+        
+        return result.toString().trim();
+    }
 }

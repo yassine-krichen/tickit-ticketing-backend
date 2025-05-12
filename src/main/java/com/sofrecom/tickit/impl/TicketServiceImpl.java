@@ -2,6 +2,7 @@ package com.sofrecom.tickit.impl;
 
 import com.sofrecom.tickit.dto.CaseResponse;
 import com.sofrecom.tickit.dto.CaseUpdate;
+import com.sofrecom.tickit.dto.TicketActivityRequest;
 import com.sofrecom.tickit.dto.TicketCount;
 import com.sofrecom.tickit.dto.TicketUpdateDTO;
 import com.sofrecom.tickit.exception.EntityCreationException;
@@ -12,10 +13,14 @@ import com.sofrecom.tickit.model.Acte_traitement;
 import com.sofrecom.tickit.model.Case;
 import com.sofrecom.tickit.model.CaseType;
 import com.sofrecom.tickit.model.Ticket;
+import com.sofrecom.tickit.model.TicketActivity;
 import com.sofrecom.tickit.repository.TicketRepository;
 import com.sofrecom.tickit.repository.TicketSpecification;
 import com.sofrecom.tickit.service.CaseService;
+import com.sofrecom.tickit.service.TicketActivityService;
 import com.sofrecom.tickit.service.TicketService;
+import com.sofrecom.tickit.util.AuthUtils;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -50,8 +55,10 @@ import java.util.stream.Collectors;
 public class TicketServiceImpl implements TicketService {
 
     private final TicketRepository ticketRepository;
+    private final TicketActivityService ticketActivityService;
     private final CaseService caseService;
     private final ApplicationEventPublisher eventPublisher;
+    private final AuthUtils authUtils; // Assuming you have an AuthUtils class for authentication
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -204,6 +211,13 @@ public class TicketServiceImpl implements TicketService {
             
             // Publish ticket created event
             eventPublisher.publishEvent(new TicketCreatedEvent(savedTicket));
+
+            //add a ticket activity with open type
+            TicketActivityRequest startActivity = new TicketActivityRequest();
+            startActivity.setType(TicketActivity.ActivityType.OPEN);
+            startActivity.setDescription("Ticket created");
+            startActivity.setUsername(authUtils.getUsernameFromFingerprint(ticket.getIssuedBy())); // change wit auth utils TODO
+            ticketActivityService.createActivity(savedTicket.getId(), startActivity);
             
             return savedTicket;
         } catch (Exception e) {
@@ -309,7 +323,25 @@ public class TicketServiceImpl implements TicketService {
             
             // Publish ticket resolved event
             eventPublisher.publishEvent(new TicketResolvedEvent(updatedTicket));
-        } else {
+        } else if (status == Ticket.Status.CLOSED && previousStatus != Ticket.Status.CLOSED) {
+            // create new ticket activity to be added to the ticket
+            TicketActivityRequest actReq = new TicketActivityRequest();
+            actReq.setUsername(authUtils.getUsernameFromFingerprint(ticket.getIssuedBy())); // change with auth utils TODO
+            actReq.setType(TicketActivity.ActivityType.CLOSE);
+            actReq.setDescription("Ticket closed");
+            ticketActivityService.createActivity(ticketId, actReq);
+
+            eventPublisher.publishEvent(new TicketUpdatedEvent(updatedTicket));
+        } else if (status == Ticket.Status.OPEN && previousStatus != Ticket.Status.OPEN) {
+            // create new ticket activity to be added to the ticket
+            TicketActivityRequest actReq = new TicketActivityRequest();
+            actReq.setUsername(authUtils.getUsernameFromFingerprint(ticket.getIssuedBy())); // change with auth utils TODO
+            actReq.setType(TicketActivity.ActivityType.OPEN);
+            actReq.setDescription("Ticket opened");
+            ticketActivityService.createActivity(ticketId, actReq);
+
+            eventPublisher.publishEvent(new TicketUpdatedEvent(updatedTicket));
+        } else  {    
             // Publish ticket updated event
             eventPublisher.publishEvent(new TicketUpdatedEvent(updatedTicket));
         }
