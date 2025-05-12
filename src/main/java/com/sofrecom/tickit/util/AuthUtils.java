@@ -121,4 +121,22 @@ public class AuthUtils {
                 .replaceAll("_+", "_")        // Replace multiple underscores with single
                 .replaceAll("^_|_$", "");     // Remove leading/trailing underscores
     }
+
+    //get cuid
+    /**
+     * Retrieves the CUID (Collaborateur Unique ID) of the currently authenticated user.
+     * 
+     * @return The CUID of the authenticated user, or "system" if no user is authenticated
+     */
+    public String getCUID() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return "system";
+        }
+        if (authentication.getPrincipal() instanceof UserDetailsImpl) {
+            UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+            return userDetails.getUsername();
+        }
+        return "Something Weird is going on";
+    }
 }
