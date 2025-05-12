@@ -104,31 +104,107 @@ public class ActeTraitementServiceImpl implements ActeTraitementService {
      */
     @Override
     public PopulatedTreatmentActResponse getPopulatedActeTraitementById(String id) {
-        // Get the basic treatment act first
-        Acte_traitement acteTraitement = acteTraitementRepository.findActiveById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Treatment act", "Id", id));
+        log.info("Fetching populated treatment act with ID: {}", id);
         
-        // Create the base response
-        ActeTraitementResponse baseResponse = mapToResponse(acteTraitement);
-        
-        // Create the populated response and extend it with additional data
-        PopulatedTreatmentActResponse populatedResponse = PopulatedTreatmentActResponse.fromBaseResponse(baseResponse);
-        
-        // Populate case information if available
-        Case associatedCase = acteTraitement.getAssociatedCase();
-        if (associatedCase != null) {
-            populatedResponse.setCaseName(associatedCase.getName());
-            populatedResponse.setCaseStatus(associatedCase.getStatus().toString());
-            populatedResponse.setCaseType(associatedCase.getType().getValue());
-            populatedResponse.setCasePriority(associatedCase.getPriority().toString());
+        try {
+            // Get the basic treatment act first
+            Acte_traitement acteTraitement = null;
+            try {
+                acteTraitement = acteTraitementRepository.findActiveById(id)
+                        .orElseThrow(() -> new ResourceNotFoundException("Treatment act", "Id", id));
+                log.debug("Successfully retrieved treatment act: {}", acteTraitement.getIdacte());
+            } catch (ResourceNotFoundException e) {
+                log.error("Treatment act not found with ID: {}", id);
+                throw e;
+            } catch (Exception e) {
+                log.error("Error fetching treatment act with ID {}: {}", id, e.getMessage(), e);
+                throw new RuntimeException("Error retrieving treatment act", e);
+            }
+            
+            // Create the base response
+            ActeTraitementResponse baseResponse = null;
+            try {
+                baseResponse = mapToResponse(acteTraitement);
+                log.debug("Successfully mapped treatment act to response object");
+            } catch (Exception e) {
+                log.error("Error mapping treatment act to response: {}", e.getMessage(), e);
+                throw new RuntimeException("Error mapping treatment act to response", e);
+            }
+            
+            // Create the populated response
+            PopulatedTreatmentActResponse populatedResponse = null;
+            try {
+                populatedResponse = PopulatedTreatmentActResponse.fromBaseResponse(baseResponse);
+                log.debug("Successfully created populated response object");
+            } catch (Exception e) {
+                log.error("Error creating populated response from base response: {}", e.getMessage(), e);
+                throw new RuntimeException("Error creating populated response", e);
+            }
+            
+            // Populate case information if available
+            try {
+                Case associatedCase = acteTraitement.getAssociatedCase();
+                if (associatedCase != null) {
+                    log.debug("Found associated case with ID: {}", associatedCase.getId());
+                    populatedResponse.setCaseName(associatedCase.getName());
+                    
+                    if (associatedCase.getStatus() != null) {
+                        populatedResponse.setCaseStatus(associatedCase.getStatus().toString());
+                    } else {
+                        log.warn("Case status is null for case ID: {}", associatedCase.getId());
+                        populatedResponse.setCaseStatus("UNKNOWN");
+                    }
+                    
+                    if (associatedCase.getType() != null) {
+                        populatedResponse.setCaseType(associatedCase.getType().getValue());
+                    } else {
+                        log.warn("Case type is null for case ID: {}", associatedCase.getId());
+                        populatedResponse.setCaseType("UNKNOWN");
+                    }
+                    
+                    if (associatedCase.getPriority() != null) {
+                        populatedResponse.setCasePriority(associatedCase.getPriority().toString());
+                    } else {
+                        log.warn("Case priority is null for case ID: {}", associatedCase.getId());
+                        populatedResponse.setCasePriority("UNKNOWN");
+                    }
+                } else {
+                    log.warn("No associated case found for treatment act ID: {}", id);
+                }
+            } catch (Exception e) {
+                log.error("Error accessing case information: {}", e.getMessage(), e);
+                // Don't rethrow - continue with partial data
+            }
+            
+            // Populate prestation information if available
+            try {
+                Prestation typePrestation = acteTraitement.getType_prestation();
+                if (typePrestation != null) {
+                    log.debug("Found associated prestation with ID: {}", typePrestation.getIdPrestation());
+                    
+                    String prestationName = typePrestation.getNomPrestation();
+                    if (prestationName != null) {
+                        populatedResponse.setPrestationName(prestationName);
+                    } else {
+                        log.warn("Prestation name is null for prestation ID: {}", typePrestation.getIdPrestation());
+                        populatedResponse.setPrestationName("UNKNOWN");
+                    }
+                } else {
+                    log.warn("No prestation found for treatment act ID: {}", id);
+                }
+            } catch (Exception e) {
+                log.error("Error accessing prestation information: {}", e.getMessage(), e);
+                // Don't rethrow - continue with partial data
+            }
+            
+            log.info("Successfully populated treatment act response for ID: {}", id);
+            return populatedResponse;
+            
+        } catch (Exception e) {
+            // Catch-all for any other unexpected exceptions
+            log.error("Unexpected error in getPopulatedActeTraitementById for ID {}: {}", id, e.getMessage(), e);
+            throw new RuntimeException("Failed to retrieve populated treatment act data", e);
         }
-        
-        // Populate prestation information if available
-        if (acteTraitement.getType_prestation() != null) {
-            populatedResponse.setPrestationName(acteTraitement.getType_prestation().getNomPrestation());
-        }
-        
-        return populatedResponse;
     }
 
     /**
@@ -495,7 +571,7 @@ public class ActeTraitementServiceImpl implements ActeTraitementService {
      * @param actionType Type of action (CREATE, UPDATE, DELETE)
      * @param userFingerprint User identifier
      */
-    private void createCaseLedgerEntry(Case caseEntity, LedgerEntry.ActionType actionType, String userFingerprint) {
+    public void createCaseLedgerEntry(Case caseEntity, LedgerEntry.ActionType actionType, String userFingerprint) {
         // Create JSON snapshot of current case state
         JsonNode dataSnapshot = createCaseJsonSnapshot(caseEntity);
         
