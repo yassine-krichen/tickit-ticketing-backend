@@ -116,6 +116,18 @@ public class Ticket {
     @Schema(description = "Service Level Agreement duration for final resolution", example = "PT24H")
     private Duration resolutionSla;
 
+    @Column(name = "in_progress_entered_at")
+    @Schema(description = "Timestamp when the ticket first entered IN_PROGRESS status")
+    private LocalDateTime inProgressEnteredAt;
+
+    @Column(name = "blocked_entered_at")
+    @Schema(description = "Timestamp when the ticket first entered BLOCKED status")
+    private LocalDateTime blockedEnteredAt;
+
+    @Column(name = "resolved_at")
+    @Schema(description = "Timestamp when the ticket was resolved")
+    private LocalDateTime resolvedAt;
+
     @Schema(description = "Priority levels for tickets, from highest (P1) to lowest (P5)")
     public enum Priority {
         P1, P2, P3, P4, P5
@@ -125,4 +137,4 @@ public class Ticket {
     public enum Status {
         OPEN, IN_PROGRESS, BLOCKED, RESOLVED, CLOSED
     }
-} 
+}

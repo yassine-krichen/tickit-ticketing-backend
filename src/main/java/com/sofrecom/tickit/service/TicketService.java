@@ -77,4 +77,15 @@ public interface TicketService {
             Ticket.Status status,
             Ticket.Priority priority
     );
+
+    /**
+     * Calculates month-over-month comparisons for ticket statistics.
+     * 
+     * @return Map with percentage changes for different metrics:
+     *         - totalTickets: Change in total tickets
+     *         - inProgress: Change in IN_PROGRESS tickets
+     *         - blocked: Change in BLOCKED tickets
+     *         - resolved: Change in RESOLVED tickets
+     */
+    Map<String, Double> getMonthOverMonthComparisons();
 }

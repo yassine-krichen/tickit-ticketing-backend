@@ -22,6 +22,28 @@ public class AuthUtils {
     private CollaborateurRepository collaborateurRepository;
 
 
+    //return id of user 
+    /**
+     * Retrieves the ID of the currently authenticated user.
+     * 
+     * @return The ID of the authenticated user, or "system" if no user is authenticated
+     */
+    public Long getAuthenticatedUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return null;
+        }
+        
+        if (authentication.getPrincipal() instanceof UserDetailsImpl) {
+            UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+            return userDetails.getId();
+            
+        }
+        
+        return null;
+    }
+
     /**
      * Gets the username of the currently authenticated user.
      * 

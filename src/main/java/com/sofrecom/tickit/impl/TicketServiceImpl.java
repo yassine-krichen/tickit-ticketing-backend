@@ -313,16 +313,34 @@ public class TicketServiceImpl implements TicketService {
         // Store the previous status for comparison
         Ticket.Status previousStatus = ticket.getStatus();
         
+        // Skip if status hasn't changed
+        if (previousStatus == status) {
+            return ticket;
+        }
+        
         // Update the ticket status
         ticket.setStatus(status);
         ticket.setUpdatedAt(LocalDateTime.now());
+        
+        // Track status transitions with timestamps (only set if not already set)
+        LocalDateTime now = LocalDateTime.now();
+        
+        if (status == Ticket.Status.IN_PROGRESS && ticket.getInProgressEnteredAt() == null) {
+            ticket.setInProgressEnteredAt(now);
+            log.info("Ticket {} entered IN_PROGRESS status for the first time", ticketId);
+        } else if (status == Ticket.Status.BLOCKED && ticket.getBlockedEnteredAt() == null) {
+            ticket.setBlockedEnteredAt(now);
+            log.info("Ticket {} entered BLOCKED status for the first time", ticketId);
+        } else if (status == Ticket.Status.RESOLVED && ticket.getResolvedAt() == null) {
+            ticket.setResolvedAt(now);
+            log.info("Ticket {} was resolved at {}", ticketId, now);
+        }
+        
         Ticket updatedTicket = saveTicket(ticket);
         
-        // Check if the ticket is being resolved/closed
+        // Rest of the existing code for handling specific status transitions...
         if (status == Ticket.Status.RESOLVED && previousStatus != Ticket.Status.RESOLVED) {
             updateCaseStatusForTicketResolution(updatedTicket);
-            
-            // Publish ticket resolved event
             eventPublisher.publishEvent(new TicketResolvedEvent(updatedTicket));
         } else if (status == Ticket.Status.CLOSED && previousStatus != Ticket.Status.CLOSED) {
             // create new ticket activity to be added to the ticket
@@ -342,7 +360,7 @@ public class TicketServiceImpl implements TicketService {
             ticketActivityService.createActivity(ticketId, actReq);
 
             eventPublisher.publishEvent(new TicketUpdatedEvent(updatedTicket));
-        } else  {    
+        } else {    
             // Publish ticket updated event
             eventPublisher.publishEvent(new TicketUpdatedEvent(updatedTicket));
         }
@@ -942,5 +960,145 @@ public class TicketServiceImpl implements TicketService {
             // Publish event for the status change
             eventPublisher.publishEvent(new TicketUpdatedEvent(ticket));
         }
+    }
+
+    @Override
+    public Map<String, Double> getMonthOverMonthComparisons() {
+        Map<String, Double> momComparisons = new HashMap<>();
+        LocalDateTime now = LocalDateTime.now();
+        
+        // Current month boundaries
+        LocalDateTime currentMonthStart = now.withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0).withNano(0);
+        
+        // Previous month boundaries
+        LocalDateTime previousMonthStart = currentMonthStart.minusMonths(1);
+        LocalDateTime previousMonthEnd = currentMonthStart.minusNanos(1);
+        
+        log.info("====== CALCULATING MOM COMPARISONS ======");
+        log.info("Current month range: {} to {}", currentMonthStart, now);
+        log.info("Previous month range: {} to {}", previousMonthStart, previousMonthEnd);
+        
+        // Get total tickets for current and previous month
+        long currentTotal = countTicketsCreatedBetween(currentMonthStart, now);
+        long previousTotal = countTicketsCreatedBetween(previousMonthStart, previousMonthEnd);
+        
+        log.info("TOTAL TICKETS - Current month: {}, Previous month: {}", currentTotal, previousTotal);
+        
+        // Calculate percentage change for total tickets
+        Double totalTicketsChange = calculatePercentageChange(previousTotal, currentTotal);
+        momComparisons.put("totalTickets", totalTicketsChange);
+        log.info("Total tickets change: {}%", totalTicketsChange);
+        
+        // IN_PROGRESS tickets - count by timestamp
+        long currentInProgress = countTicketsByStatusAndEnteredAtBetween(
+            Ticket.Status.IN_PROGRESS, currentMonthStart, now);
+        long previousInProgress = countTicketsByStatusAndEnteredAtBetween(
+            Ticket.Status.IN_PROGRESS, previousMonthStart, previousMonthEnd);
+        
+        log.info("IN_PROGRESS TICKETS - Current month: {}, Previous month: {}", 
+                currentInProgress, previousInProgress);
+        Double inProgressChange = calculatePercentageChange(previousInProgress, currentInProgress);
+        momComparisons.put("inProgress", inProgressChange);
+        log.info("In-progress tickets change: {}%", inProgressChange);
+        
+        // BLOCKED tickets
+        long currentBlocked = countTicketsByStatusAndEnteredAtBetween(
+            Ticket.Status.BLOCKED, currentMonthStart, now);
+        long previousBlocked = countTicketsByStatusAndEnteredAtBetween(
+            Ticket.Status.BLOCKED, previousMonthStart, previousMonthEnd);
+        
+        log.info("BLOCKED TICKETS - Current month: {}, Previous month: {}", 
+                currentBlocked, previousBlocked);
+        Double blockedChange = calculatePercentageChange(previousBlocked, currentBlocked);
+        momComparisons.put("blocked", blockedChange);
+        log.info("Blocked tickets change: {}%", blockedChange);
+        
+        // RESOLVED tickets
+        long currentResolved = countTicketsByStatusAndEnteredAtBetween(
+            Ticket.Status.RESOLVED, currentMonthStart, now);
+        long previousResolved = countTicketsByStatusAndEnteredAtBetween(
+            Ticket.Status.RESOLVED, previousMonthStart, previousMonthEnd);
+        
+        // Calculate percentage changes
+        momComparisons.put("inProgress", calculatePercentageChange(previousInProgress, currentInProgress));
+        momComparisons.put("blocked", calculatePercentageChange(previousBlocked, currentBlocked));
+        momComparisons.put("resolved", calculatePercentageChange(previousResolved, currentResolved));
+        
+        return momComparisons;
+    }
+
+    /**
+     * Counts tickets created between the specified timestamps.
+     */
+    private long countTicketsCreatedBetween(LocalDateTime start, LocalDateTime end) {
+        long count = ticketRepository.count((root, query, cb) -> 
+            cb.and(
+                cb.greaterThanOrEqualTo(root.get("createdAt"), start),
+                cb.lessThanOrEqualTo(root.get("createdAt"), end)
+            )
+        );
+        log.debug("Count of tickets created between {} and {}: {}", start, end, count);
+        return count;
+    }
+
+    /**
+     * Counts tickets that entered a specific status between the specified timestamps.
+     */
+    private long countTicketsByStatusAndEnteredAtBetween(Ticket.Status status, LocalDateTime start, LocalDateTime end) {
+        // Use the appropriate timestamp field based on the status
+        String fieldName = getTimestampFieldForStatus(status);
+        
+        return ticketRepository.count((root, query, cb) -> 
+            cb.and(
+                cb.isNotNull(root.get(fieldName)),
+                cb.greaterThanOrEqualTo(root.get(fieldName), start),
+                cb.lessThanOrEqualTo(root.get(fieldName), end)
+            )
+        );
+    }
+
+    /**
+     * Gets the appropriate timestamp field name for a given status.
+     */
+    private String getTimestampFieldForStatus(Ticket.Status status) {
+        switch (status) {
+            case IN_PROGRESS:
+                return "inProgressEnteredAt";
+            case BLOCKED:
+                return "blockedEnteredAt";
+            case RESOLVED:
+                return "resolvedAt";
+            default:
+                return "createdAt";
+        }
+    }
+
+    /**
+     * Calculates percentage change between previous and current values.
+     * Logs the input values and calculation logic.
+     */
+    private Double calculatePercentageChange(long previous, long current) {
+        log.debug("Calculating percentage change: previous={}, current={}", previous, current);
+        
+        if (previous == 0) {
+            if (current == 0) {
+                log.debug("Both values are zero, returning 0% change");
+                return 0.0;
+            }
+            log.debug("Previous value is zero, current is non-zero, returning 100% increase");
+            return 100.0;
+        }
+        
+        double rawPercentage = ((double) (current - previous) / previous) * 100.0;
+        double formattedPercentage = formatPercentage(rawPercentage);
+        
+        log.debug("Raw percentage change: {}%, formatted: {}%", rawPercentage, formattedPercentage);
+        return formattedPercentage;
+    }
+
+    // Add this method to format percentages to 1 decimal place
+    private Double formatPercentage(double percentage) {
+        // Round to 1 decimal place
+        return Math.round(percentage * 10.0) / 10.0;
     }
 }

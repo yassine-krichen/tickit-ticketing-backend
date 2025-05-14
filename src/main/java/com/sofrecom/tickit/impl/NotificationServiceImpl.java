@@ -271,9 +271,12 @@ public class NotificationServiceImpl implements NotificationService {
      * @throws IllegalStateException if the current user cannot be found
      */
     private User getCurrentUser() {
-        String username = authUtils.getAuthenticatedUsername();
-        return userRepository.findByUsername(username)
-                .orElseThrow(() -> new IllegalStateException("Current user could not be found"));
+        Long userId = authUtils.getAuthenticatedUserId();
+        if (userId == null) {
+            throw new IllegalStateException("YOU FUCKED UP IN STEP1");
+        }
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalStateException("YOU FUCKED UP IN STEP2"));
     }
     
     /**

@@ -412,14 +412,14 @@ public class TicketController {
     }
 
     @Operation(summary = "Get all ticket statistics", 
-               description = "Returns all ticket statistics including counts by status, type, step, and sub-status")
+               description = "Returns all ticket statistics including counts by status, type, step, sub-status, and month-over-month comparisons")
     @ApiResponse(responseCode = "200", 
                 description = "All ticket statistics")
     @GetMapping("/stats/all")
     public ResponseEntity<Map<String, Object>> getAllTicketStats() {
         Map<String, Object> allStats = new HashMap<>();
         
-        // Get all statistics
+        // Get all existing statistics
         allStats.put("countsByStatus", ticketService.getTicketCountByStatus());
         allStats.put("countsByType", ticketService.getTicketCountByType());
         allStats.put("countsByStep", ticketService.getTicketCountByStep());
@@ -427,6 +427,9 @@ public class TicketController {
         
         // Add raw counts for debugging
         allStats.put("totalTickets", ticketService.getAllTickets(null, null, null, null).size());
+        
+        // Add month-over-month comparisons
+        allStats.put("momComparisons", ticketService.getMonthOverMonthComparisons());
         
         return ResponseEntity.ok(allStats);
     }
