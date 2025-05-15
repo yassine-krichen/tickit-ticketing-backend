@@ -211,6 +211,7 @@ public class TicketServiceImpl implements TicketService {
             updateCaseStatusForTicketCreation(savedTicket);
             
             // Publish ticket created event
+            log.info("Publishing TicketCreatedEvent for ticket {}", savedTicket.getId());
             eventPublisher.publishEvent(new TicketCreatedEvent(savedTicket));
 
             //add a ticket activity with open type
@@ -341,7 +342,13 @@ public class TicketServiceImpl implements TicketService {
         // Rest of the existing code for handling specific status transitions...
         if (status == Ticket.Status.RESOLVED && previousStatus != Ticket.Status.RESOLVED) {
             updateCaseStatusForTicketResolution(updatedTicket);
-            eventPublisher.publishEvent(new TicketResolvedEvent(updatedTicket));
+            // Add debug logging
+            log.info("Publishing TicketResolvedEvent for ticket {}", updatedTicket.getId());
+            try {
+                eventPublisher.publishEvent(new TicketResolvedEvent(updatedTicket));
+            } catch (Exception e) {
+                log.error("Error publishing TicketResolvedEvent: {}", e.getMessage(), e);
+            }
         } else if (status == Ticket.Status.CLOSED && previousStatus != Ticket.Status.CLOSED) {
             // create new ticket activity to be added to the ticket
             TicketActivityRequest actReq = new TicketActivityRequest();

@@ -61,4 +61,13 @@ public interface CollaborateurRepository extends JpaRepository<Collaborateur, St
      * @return an Optional containing the collaborateur if found, empty otherwise
      */
     Optional<Collaborateur> findByNom(String nom);
+
+    /**
+     * Find a collaborateur by their first and last name
+     *
+     * @param nom The last name
+     * @param prenom The first name
+     * @return Optional containing the collaborateur if found
+     */
+    Optional<Collaborateur> findByNomAndPrenom(String nom, String prenom);
 }
