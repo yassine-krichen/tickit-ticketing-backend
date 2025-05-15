@@ -447,7 +447,7 @@ public class TicketNotificationListener {
         log.debug("Finding user from issuedBy: {}", issuedBy);
         
         try {
-            // Parse the issuedBy string which has format: lastname:firstname:role:team
+            // Parse the issuedBy string which has format: lastname.firstname.role.team
             // NOTE: I hate my life, after 2 hours of debugging u need \\ to escape the dot in regex
             // Split the string by '.' to get the parts
             String[] parts = issuedBy.split("\\.");
@@ -456,7 +456,7 @@ public class TicketNotificationListener {
                 log.warn("Part: {}", part);
             }
             if (parts.length < 2) {
-                log.warn("Here, Invalid issuedBy format: {}, expected lastname:firstname:role:team", issuedBy);
+                log.warn("Here, Invalid issuedBy format: {}, expected lastname.firstname.role.team", issuedBy);
                 return null;
             }
             
