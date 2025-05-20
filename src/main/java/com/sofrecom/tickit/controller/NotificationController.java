@@ -16,9 +16,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import javax.validation.Valid;
+import java.time.LocalDateTime;
 import java.util.List;
+import org.springframework.data.domain.Page;
 
 /**
  * REST controller for managing notifications.
@@ -210,6 +213,101 @@ public class NotificationController {
                 request.getMessage(), 
                 request.getPayload());
                 
+        return ResponseEntity.ok(new CountResponse(count));
+    }
+    
+    /**
+     * GET /api/v1/notifications/paged : Get paginated notifications with filtering capabilities.
+     *
+     * @param page Page number (1-based)
+     * @param size Number of items per page
+     * @param readFlag Filter by read status (true = read, false = unread)
+     * @param type Filter by notification type
+     * @param startDate Filter notifications after this date (ISO format)
+     * @param endDate Filter notifications before this date (ISO format)
+     * @param search Search in notification message
+     * @return the ResponseEntity with status 200 (OK) and a paginated list of notifications
+     */
+    @GetMapping("/paged")
+    @Operation(
+        summary = "Get paginated notifications",
+        description = "Retrieves a paginated list of notifications with filtering capabilities"
+    )
+    @ApiResponse(
+        responseCode = "200",
+        description = "Successfully retrieved paginated notifications",
+        content = @Content(mediaType = "application/json", schema = @Schema(implementation = PagedNotificationResponse.class))
+    )
+    public ResponseEntity<PagedNotificationResponse> getPagedNotifications(
+            @Parameter(description = "Page number (1-based)") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "Number of items per page") @RequestParam(defaultValue = "10") int size,
+            @Parameter(description = "Filter by read status") @RequestParam(required = false) Boolean readFlag,
+            @Parameter(description = "Filter by notification type") @RequestParam(required = false) String type,
+            @Parameter(description = "Filter notifications after this date (ISO format)") 
+                @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @Parameter(description = "Filter notifications before this date (ISO format)") 
+                @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
+            @Parameter(description = "Search in notification message") @RequestParam(required = false) String search) {
+        
+        log.debug("REST request to get paginated notifications: page={}, size={}, readFlag={}, type={}, startDate={}, endDate={}, search={}", 
+                page, size, readFlag, type, startDate, endDate, search);
+        
+        // Convert 1-based page to 0-based
+        int zeroBasedPage = Math.max(0, page - 1);
+        
+        // Build notification filter request
+        NotificationFilterRequest filter = NotificationFilterRequest.builder()
+                .readFlag(readFlag)
+                .createdAfter(startDate)
+                .createdBefore(endDate)
+                .searchText(search)
+                .build();
+        
+        // Parse notification type if provided
+        if (type != null && !type.isEmpty()) {
+            try {
+                filter.setType(NotificationType.valueOf(type));
+            } catch (IllegalArgumentException e) {
+                log.warn("Invalid notification type: {}", type);
+            }
+        }
+        
+        Page<NotificationResponse> pagedResult = notificationService.getAllPaged(filter, zeroBasedPage, size);
+        
+        // Map to custom response format
+        PagedNotificationResponse response = new PagedNotificationResponse(
+                pagedResult.getContent(),
+                pagedResult.getTotalElements(),
+                pagedResult.getTotalPages(),
+                pagedResult.getSize(),
+                pagedResult.getNumber(),
+                pagedResult.isFirst(),
+                pagedResult.isLast()
+        );
+        
+        return ResponseEntity.ok(response);
+    }
+    
+    /**
+     * POST /api/v1/notifications/delete : Delete one or more notifications permanently.
+     *
+     * @param request Request containing IDs of the notifications to delete
+     * @return the ResponseEntity with status 200 (OK) and the number of notifications deleted
+     */
+    @PostMapping("/delete")
+    @Operation(
+        summary = "Delete notifications",
+        description = "Deletes one or more notifications permanently"
+    )
+    @ApiResponse(
+        responseCode = "200",
+        description = "Successfully deleted notifications",
+        content = @Content(mediaType = "application/json", schema = @Schema(implementation = CountResponse.class))
+    )
+    public ResponseEntity<CountResponse> deleteNotificationsById(@Valid @RequestBody BulkIdsRequest request) {
+        log.debug("REST request to delete notifications by IDs: {}", request.getIds());
+        
+        int count = notificationService.deleteNotifications(request.getIds());
         return ResponseEntity.ok(new CountResponse(count));
     }
 }

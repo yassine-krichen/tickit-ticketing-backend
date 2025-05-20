@@ -34,4 +34,7 @@ public class NotificationFilterRequest {
     
     @Schema(description = "Filter by notifications created before this time")
     private LocalDateTime createdBefore;
+    
+    @Schema(description = "Search text to match in notification message")
+    private String searchText;
 }

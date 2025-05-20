@@ -9,6 +9,8 @@ import com.sofrecom.tickit.model.NotificationType;
 import java.util.List;
 import java.util.Set;
 
+import org.springframework.data.domain.Page;
+
 /**
  * Service interface for notification operations.
  * Provides methods to create, retrieve, update, and delete notifications.
@@ -48,6 +50,16 @@ public interface NotificationService {
     List<NotificationResponse> getAll(NotificationFilterRequest filter, int page, int size);
     
     /**
+     * Retrieves paginated notifications for the current user with optional filtering.
+     *
+     * @param filter Filter criteria for notifications
+     * @param page Page number (0-based)
+     * @param size Page size
+     * @return A page of notification responses matching the criteria
+     */
+    Page<NotificationResponse> getAllPaged(NotificationFilterRequest filter, int page, int size);
+    
+    /**
      * Retrieves a specific notification by ID.
      *
      * @param id The notification ID
@@ -70,6 +82,15 @@ public interface NotificationService {
      * @return The number of notifications deleted
      */
     int deleteBulk(List<Long> ids);
+    
+    /**
+     * Deletes multiple notifications by their IDs.
+     * Only notifications owned by the current user will be deleted.
+     *
+     * @param ids The IDs of notifications to delete
+     * @return The number of notifications deleted
+     */
+    int deleteNotifications(List<Long> ids);
     
     /**
      * Counts unread notifications for the current user.

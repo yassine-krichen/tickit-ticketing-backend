@@ -148,6 +148,34 @@ public class NotificationServiceImpl implements NotificationService {
      */
     @Override
     @Transactional(readOnly = true)
+    public Page<NotificationResponse> getAllPaged(NotificationFilterRequest filter, int page, int size) {
+        log.debug("Getting paginated notifications with filter: {}, page: {}, size: {}", filter, page, size);
+        
+        User currentUser = getCurrentUser();
+        
+        // Create sort with read flag priority first, then creation date
+        Sort sort = Sort.by(
+            Sort.Order.asc("readFlag"),  // Unread notifications first
+            Sort.Order.desc("createdAt") // Newest first
+        );
+        
+        Pageable pageable = PageRequest.of(page, size, sort);
+        
+        // Create specification with all filters
+        Specification<Notification> specification = createSpecification(filter, currentUser);
+        
+        // Execute query
+        Page<Notification> notifications = notificationRepository.findAll(specification, pageable);
+        
+        // Map to DTOs
+        return notifications.map(this::mapToResponse);
+    }
+    
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @Transactional(readOnly = true)
     public NotificationResponse getById(Long id) {
         log.debug("Getting notification by id: {}", id);
         
@@ -216,6 +244,22 @@ public class NotificationServiceImpl implements NotificationService {
      * {@inheritDoc}
      */
     @Override
+    @Transactional
+    public int deleteNotifications(List<Long> ids) {
+        log.debug("Deleting notifications by IDs: {}", ids);
+        
+        if (ids == null || ids.isEmpty()) {
+            return 0;
+        }
+        
+        User currentUser = getCurrentUser();
+        return notificationRepository.deleteByIdInAndUserRef(ids, currentUser);
+    }
+    
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     @Transactional(readOnly = true)
     public long countUnread() {
         User currentUser = getCurrentUser();
@@ -257,6 +301,12 @@ public class NotificationServiceImpl implements NotificationService {
                 
                 if (filter.getCreatedBefore() != null) {
                     predicates.add(cb.lessThanOrEqualTo(root.get("createdAt"), filter.getCreatedBefore()));
+                }
+                
+                // Add search functionality
+                if (filter.getSearchText() != null && !filter.getSearchText().trim().isEmpty()) {
+                    String searchPattern = "%" + filter.getSearchText().trim().toLowerCase() + "%";
+                    predicates.add(cb.like(cb.lower(root.get("message")), searchPattern));
                 }
             }
             
