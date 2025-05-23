@@ -137,22 +137,24 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     /**
-     * Handles Spring Security's AccessDeniedException.
+     * Handles custom AccessDeniedException.
      *
-     * @param ex The AccessDeniedException.
-     * @param request The incoming request.
-     * @return ResponseEntity containing the formatted error response.
+     * @param ex The AccessDeniedException
+     * @param request The HTTP request
+     * @return ResponseEntity with error details and FORBIDDEN status
      */
-    @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ErrorResponse> handleAccessDeniedException(
-            AccessDeniedException ex, HttpServletRequest request) {
-
+    @ExceptionHandler(com.sofrecom.tickit.exception.AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleCustomAccessDeniedException(
+            com.sofrecom.tickit.exception.AccessDeniedException ex, 
+            HttpServletRequest request) {
+        
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.FORBIDDEN.value(),
-                HttpStatus.FORBIDDEN.getReasonPhrase(),
-                "You don't have permission to access this resource",
+                "Access Denied",
+                ex.getMessage(),
                 request.getRequestURI()
         );
+        
         return new ResponseEntity<>(errorResponse, HttpStatus.FORBIDDEN);
     }
 

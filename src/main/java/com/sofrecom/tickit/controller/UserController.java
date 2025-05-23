@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.sofrecom.tickit.dto.UserResponseDTO;
+import com.sofrecom.tickit.dto.UserInfoDTO;
 import com.sofrecom.tickit.exception.UserNotFoundException;
 import com.sofrecom.tickit.service.UserService;
 
@@ -46,6 +47,40 @@ public class UserController {
             return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(err);
+        }
+    }
+
+    /**
+     * Retrieves detailed information about the current user including username and roles.
+     *
+     * @return ResponseEntity containing user information or appropriate error response
+     */
+    @GetMapping("/info")
+    public ResponseEntity<UserInfoDTO> getUserInfo() {
+        try {
+            UserInfoDTO dto = userService.getCurrentUserInfo();
+            return ResponseEntity.ok(dto);
+        } catch (AuthenticationCredentialsNotFoundException ex) {
+            UserInfoDTO err = UserInfoDTO.builder()
+                    .message("Unauthorized: " + ex.getMessage())
+                    .build();
+            return ResponseEntity
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .body(err);
+        } catch (UserNotFoundException ex) {
+            UserInfoDTO err = UserInfoDTO.builder()
+                    .message("Not Found: " + ex.getMessage())
+                    .build();
+            return ResponseEntity
+                    .status(HttpStatus.NOT_FOUND)
+                    .body(err);
+        } catch (Exception ex) {
+            UserInfoDTO err = UserInfoDTO.builder()
+                    .message("Internal Server Error: " + ex.getMessage())
+                    .build();
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(err);
         }
     }
 }

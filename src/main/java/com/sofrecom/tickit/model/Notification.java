@@ -51,7 +51,13 @@ public class Notification {
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(
         name = "notification_target_roles",
-        joinColumns = @JoinColumn(name = "notification_id")
+        joinColumns = @JoinColumn(
+            name = "notification_id",
+            foreignKey = @ForeignKey(
+                name = "fk_notification_role",
+                foreignKeyDefinition = "FOREIGN KEY (notification_id) REFERENCES notifications(id) ON DELETE CASCADE"
+            )
+        )
     )
     @Column(name = "role")
     @Enumerated(EnumType.STRING)

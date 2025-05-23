@@ -131,12 +131,14 @@ public class TicketNotificationListener {
     @EventListener
     public void handleTicketUpdatedEvent(TicketUpdatedEvent event) {
         log.info("TicketUpdatedEvent received for ticket ID: {}", event.getTicket().getId());
-        log.info("EVENT LISTENER COUGHT TICKET UPDATED EVENT");
         Ticket ticket = event.getTicket();
         String message = String.format("Ticket updated: %s", ticket.getSubject());
         
         // Create payload with ticket details
         JsonNode payload = createTicketPayload(ticket);
+        
+        // Track users who have already been notified to prevent duplicates
+        Set<Long> notifiedUserIds = new HashSet<>();
         
         // Notify ticket creator
         if (ticket.getIssuedBy() != null) {
@@ -148,6 +150,10 @@ public class TicketNotificationListener {
                         message,
                         payload
                 );
+                
+                // Add user ID to the set of notified users
+                notifiedUserIds.add(user.getId());
+                
                 log.info("Created ticket update notification for issuer {} with ID: {}", 
                         user.getUsername(), response.getId());
             }
@@ -158,15 +164,28 @@ public class TicketNotificationListener {
         log.info("Found {} users with activities on ticket {}", activityUsers.size(), ticket.getId());
         
         for (User user : activityUsers) {
+            // Skip if we've already sent a notification to this user
+            if (notifiedUserIds.contains(user.getId())) {
+                log.debug("Skipping duplicate notification for user {} who is already notified", 
+                        user.getUsername());
+                continue;
+            }
+            
             NotificationResponse response = notificationService.createForUser(
                     user.getId(),
                     NotificationType.UPDATE,
                     message,
                     payload
             );
+            
+            // Add to set of notified users
+            notifiedUserIds.add(user.getId());
+            
             log.info("Created ticket update notification for activity user {} with ID: {}", 
                     user.getUsername(), response.getId());
         }
+        
+        log.info("Sent ticket update notifications to {} unique users", notifiedUserIds.size());
     }
     
     /**

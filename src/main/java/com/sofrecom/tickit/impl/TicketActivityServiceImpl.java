@@ -57,11 +57,21 @@ public class TicketActivityServiceImpl implements TicketActivityService {
                                                  TicketActivityRequest request) {
         Ticket ticket = ticketRepo.findById(ticketId)
                 .orElseThrow(() -> new EntityNotFoundException("Ticket not found"));
+        
         TicketActivity entity = new TicketActivity();
         entity.setTicket(ticket);
         entity.setUsername(request.getUsername());
         entity.setType(request.getType());
         entity.setDescription(request.getDescription().trim());
+        
+        // Auto-complete OPEN and CLOSE activities
+        if (request.getType() == ActivityType.OPEN || request.getType() == ActivityType.CLOSE) {
+            LocalDateTime now = LocalDateTime.now();
+            // Set end time to match start time for instant completion
+            entity.setEndTime(now);
+            // Duration will be calculated to 0 by the @PostLoad method
+        }
+        
         activityRepo.save(entity);
         
         // Instead of directly updating ticket status, publish an event
