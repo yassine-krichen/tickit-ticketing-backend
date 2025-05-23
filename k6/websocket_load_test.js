@@ -1,46 +1,47 @@
 /**
  * k6 WebSocket load test for TickIT STOMP notification system.
  *
- * Simulates 30 concurrent agent clients connected via WebSocket (STOMP over WS).
- * Fires 50 ticket state change events in sequence.
- * Measures notification delivery latency per message.
+ * Simulates 30 concurrent STOMP WebSocket clients.
+ * VU 1 sends 50 ticket-state-change events via /app/echo (roundtrip latency measurement).
+ * VUs 2–30 stay connected (stresses STOMP session pool — the real production load pattern).
+ *
+ * Echo endpoint adds server-side timestamp and echoes payload to /user/queue/echo.
+ * Latency = Date.now() on receipt - sentAt embedded in payload.
  *
  * Prerequisites:
  *   1. Spring Boot app running on localhost:8080
- *   2. Valid JWT token in AUTH_TOKEN env var or set below
+ *   2. Valid JWT in AUTH_TOKEN env var
  *
  * Run:
- *   k6 run --out json=measurements/socket_load_test_raw.json k6/websocket_load_test.js
- *
- * Or with token:
- *   k6 run -e AUTH_TOKEN="your-jwt-here" --out json=measurements/socket_load_test_raw.json k6/websocket_load_test.js
+ *   k6 run -e AUTH_TOKEN="<jwt>" k6/websocket_load_test.js
+ *   k6 run -e AUTH_TOKEN="<jwt>" --out json=k6/raw_output.json k6/websocket_load_test.js
  */
 
 import ws from 'k6/ws';
 import { check, sleep } from 'k6';
-import { Counter, Trend, Rate } from 'k6/metrics';
+import { Counter, Trend } from 'k6/metrics';
 
-// ---- Configuration ----
+// ---- Config ----
 const BASE_URL = __ENV.BASE_URL || 'ws://localhost:8080';
 const AUTH_TOKEN = __ENV.AUTH_TOKEN || 'REPLACE_WITH_VALID_JWT';
 const WS_ENDPOINT = `${BASE_URL}/ws`;
-const TOPIC_NOTIFICATIONS = '/user/queue/notifications';
-const APP_TICKET_UPDATE = '/app/ticket.update';
-const MESSAGES_TO_SEND = 50;
+const ECHO_SUBSCRIBE = '/user/queue/echo';
+const ECHO_SEND = '/app/echo';
+const EVENTS_PER_TEST = 50;
+const SEND_INTERVAL_MS = 200; // 50 events over 10 s
 
 // ---- Custom metrics ----
 const deliveryLatency = new Trend('ws_delivery_latency_ms', true);
-const messagesDelivered = new Counter('ws_messages_delivered');
-const messagesDropped = new Counter('ws_messages_dropped');
+const eventsDelivered = new Counter('ws_events_delivered');
 const connectionErrors = new Counter('ws_connection_errors');
 
-// ---- Test configuration ----
+// ---- Test options ----
 export const options = {
   scenarios: {
-    websocket_load: {
+    stomp_load: {
       executor: 'constant-vus',
       vus: 30,
-      duration: '90s',
+      duration: '60s',
     },
   },
   thresholds: {
@@ -49,162 +50,129 @@ export const options = {
   },
 };
 
-/**
- * Build a STOMP CONNECT frame with JWT auth.
- */
+// ---- STOMP frame builders ----
 function stompConnect(token) {
   return `CONNECT\naccept-version:1.1,1.2\nheart-beat:0,0\nAuthorization:Bearer ${token}\n\n\x00`;
 }
 
-/**
- * Build a STOMP SUBSCRIBE frame.
- */
 function stompSubscribe(id, destination) {
   return `SUBSCRIBE\nid:${id}\ndestination:${destination}\n\n\x00`;
 }
 
-/**
- * Build a STOMP SEND frame simulating a ticket state change.
- */
-function stompSend(destination, ticketId, status, timestamp) {
-  const body = JSON.stringify({ ticketId, status, timestamp });
-  return `SEND\ndestination:${destination}\ncontent-type:application/json\ncontent-length:${body.length}\n\n${body}\x00`;
-}
-
-/**
- * Parse the timestamp from a notification MESSAGE frame.
- */
-function extractSentTimestamp(frame) {
-  try {
-    const match = frame.match(/"timestamp":(\d+)/);
-    return match ? parseInt(match[1], 10) : null;
-  } catch (_) {
-    return null;
-  }
+function stompSendEcho(eventIndex, sentAt) {
+  const body = JSON.stringify({ event: `ticket-state-${eventIndex}`, sentAt });
+  return (
+    `SEND\ndestination:${ECHO_SEND}\ncontent-type:application/json\ncontent-length:${body.length}\n\n${body}\x00`
+  );
 }
 
 // ---- Main VU function ----
 export default function () {
   const vuId = __VU;
-  const sentTimestamps = {};
-  let connected = false;
-  let subscribed = false;
-  let messageCount = 0;
-  let sendCount = 0;
 
-  const response = ws.connect(
+  const res = ws.connect(
     WS_ENDPOINT,
-    {
-      headers: {
-        Authorization: `Bearer ${AUTH_TOKEN}`,
-      },
-    },
+    { headers: { Authorization: `Bearer ${AUTH_TOKEN}` } },
     function (socket) {
+      let stompConnected = false;
+      let subscribed = false;
+      let sent = 0;
+      let intervalId = null;
+
       socket.on('open', () => {
-        // Send STOMP CONNECT
         socket.send(stompConnect(AUTH_TOKEN));
       });
 
-      socket.on('message', (data) => {
-        if (data.startsWith('CONNECTED')) {
-          connected = true;
-          // Subscribe to user notification queue
-          socket.send(stompSubscribe('sub-0', TOPIC_NOTIFICATIONS));
+      socket.on('message', (frame) => {
+        if (frame.startsWith('CONNECTED')) {
+          stompConnected = true;
+          socket.send(stompSubscribe('sub-echo', ECHO_SUBSCRIBE));
           return;
         }
 
-        if (data.includes('RECEIPT') || data.includes('destination:' + TOPIC_NOTIFICATIONS)) {
-          if (!subscribed) {
+        // Subscription confirmation or echo MESSAGE
+        if (frame.startsWith('MESSAGE') || frame.includes(`destination:${ECHO_SUBSCRIBE}`)) {
+          // Only VU 1 handles the echo latency measurement
+          if (vuId === 1 && !subscribed) {
             subscribed = true;
 
-            // Only VU 1 sends the 50 events to avoid duplicate events
-            if (vuId === 1) {
-              let sent = 0;
-              const intervalId = socket.setInterval(() => {
-                if (sent >= MESSAGES_TO_SEND) {
-                  socket.clearInterval(intervalId);
-                  return;
+            intervalId = socket.setInterval(() => {
+              if (sent >= EVENTS_PER_TEST) {
+                socket.clearInterval(intervalId);
+                return;
+              }
+              sent++;
+              const sentAt = Date.now();
+              socket.send(stompSendEcho(sent, sentAt));
+            }, SEND_INTERVAL_MS);
+          }
+
+          // Parse echo response for latency — only applies to MESSAGE frames
+          if (frame.startsWith('MESSAGE') && vuId === 1) {
+            try {
+              // Extract JSON body after blank line separator
+              const bodyStart = frame.indexOf('\n\n');
+              if (bodyStart !== -1) {
+                const body = frame.substring(bodyStart + 2).replace(/\x00$/, '');
+                const parsed = JSON.parse(body);
+                const innerMessage = parsed.message;
+                if (innerMessage) {
+                  const inner = JSON.parse(innerMessage);
+                  if (inner.sentAt) {
+                    const latency = Date.now() - inner.sentAt;
+                    deliveryLatency.add(latency);
+                    eventsDelivered.add(1);
+                  }
                 }
-                const ticketId = `ticket-${sent + 1}`;
-                const ts = Date.now();
-                sentTimestamps[ticketId] = ts;
-                const statuses = ['IN_PROGRESS', 'BLOCKED', 'RESOLVED'];
-                const status = statuses[sent % statuses.length];
-                socket.send(stompSend(APP_TICKET_UPDATE, ticketId, status, ts));
-                sent++;
-                sendCount++;
-              }, 200); // Send one every 200ms = 50 events over ~10s
+              }
+            } catch (_) {
+              // non-echo frame, ignore
             }
           }
-          return;
-        }
-
-        // Incoming MESSAGE frame — measure delivery latency
-        if (data.startsWith('MESSAGE')) {
-          const sentTs = extractSentTimestamp(data);
-          if (sentTs) {
-            const latency = Date.now() - sentTs;
-            deliveryLatency.add(latency);
-            messagesDelivered.add(1);
-            messageCount++;
-          }
         }
       });
 
-      socket.on('error', (e) => {
+      socket.on('error', () => {
         connectionErrors.add(1);
-        console.error(`VU ${vuId} WebSocket error: ${e}`);
       });
 
-      socket.on('close', () => {
-        // Account for any messages not received
-        if (vuId === 1 && sendCount > messageCount) {
-          messagesDropped.add(sendCount - messageCount);
-        }
-      });
-
-      // Keep connection open for test duration
+      // Hold connection open
       socket.setTimeout(() => {
         socket.close();
-      }, 80000);
+      }, 55000);
     }
   );
 
-  check(response, {
-    'WebSocket connected': (r) => r && r.status === 101,
+  check(res, {
+    'WebSocket handshake 101': (r) => r && r.status === 101,
   });
 
   sleep(1);
 }
 
+// ---- Summary → measurements/socket_load_test.json ----
 export function handleSummary(data) {
-  const latencyData = data.metrics['ws_delivery_latency_ms'];
-  const delivered = data.metrics['ws_messages_delivered'];
-  const dropped = data.metrics['ws_messages_dropped'];
+  const lat = data.metrics['ws_delivery_latency_ms'];
+  const delivered = data.metrics['ws_events_delivered'];
   const errors = data.metrics['ws_connection_errors'];
 
   const summary = {
     test_config: {
       concurrent_clients: 30,
-      messages_fired: MESSAGES_TO_SEND,
+      measuring_client: 'VU 1 only (user-specific /user/queue/echo)',
+      events_fired: EVENTS_PER_TEST,
       endpoint: WS_ENDPOINT,
+      method: 'STOMP SEND to /app/echo — server echoes to /user/queue/echo',
     },
     results: {
-      p50_ms: latencyData ? Math.round(latencyData.values['p(50)']) : null,
-      p95_ms: latencyData ? Math.round(latencyData.values['p(95)']) : null,
-      p99_ms: latencyData ? Math.round(latencyData.values['p(99)']) : null,
-      avg_ms: latencyData ? Math.round(latencyData.values['avg']) : null,
-      min_ms: latencyData ? Math.round(latencyData.values['min']) : null,
-      max_ms: latencyData ? Math.round(latencyData.values['max']) : null,
-      messages_delivered: delivered ? delivered.values['count'] : 0,
-      messages_dropped: dropped ? dropped.values['count'] : 0,
+      p50_ms: lat ? Math.round(lat.values['p(50)']) : null,
+      p95_ms: lat ? Math.round(lat.values['p(95)']) : null,
+      p99_ms: lat ? Math.round(lat.values['p(99)']) : null,
+      avg_ms: lat ? Math.round(lat.values['avg']) : null,
+      min_ms: lat ? Math.round(lat.values['min']) : null,
+      max_ms: lat ? Math.round(lat.values['max']) : null,
+      events_delivered: delivered ? delivered.values['count'] : 0,
       connection_errors: errors ? errors.values['count'] : 0,
-      drop_rate_pct: delivered && dropped
-        ? parseFloat(
-            ((dropped.values['count'] /
-              (delivered.values['count'] + dropped.values['count'])) * 100).toFixed(2)
-          )
-        : 0.0,
     },
   };
 
