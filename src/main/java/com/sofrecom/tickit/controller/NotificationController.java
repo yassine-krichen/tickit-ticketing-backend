@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import javax.validation.Valid;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.data.domain.Page;
@@ -223,8 +224,8 @@ public class NotificationController {
      * @param size Number of items per page
      * @param readFlag Filter by read status (true = read, false = unread)
      * @param type Filter by notification type
-     * @param startDate Filter notifications after this date (ISO format)
-     * @param endDate Filter notifications before this date (ISO format)
+     * @param startDate Filter notifications after this date (format: yyyy-MM-dd)
+     * @param endDate Filter notifications before this date (format: yyyy-MM-dd)
      * @param search Search in notification message
      * @return the ResponseEntity with status 200 (OK) and a paginated list of notifications
      */
@@ -243,10 +244,10 @@ public class NotificationController {
             @Parameter(description = "Number of items per page") @RequestParam(defaultValue = "10") int size,
             @Parameter(description = "Filter by read status") @RequestParam(required = false) Boolean readFlag,
             @Parameter(description = "Filter by notification type") @RequestParam(required = false) String type,
-            @Parameter(description = "Filter notifications after this date (ISO format)") 
-                @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
-            @Parameter(description = "Filter notifications before this date (ISO format)") 
-                @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
+            @Parameter(description = "Filter notifications after this date (format: yyyy-MM-dd)") 
+                @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @Parameter(description = "Filter notifications before this date (format: yyyy-MM-dd)") 
+                @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @Parameter(description = "Search in notification message") @RequestParam(required = false) String search) {
         
         log.debug("REST request to get paginated notifications: page={}, size={}, readFlag={}, type={}, startDate={}, endDate={}, search={}", 
@@ -255,11 +256,15 @@ public class NotificationController {
         // Convert 1-based page to 0-based
         int zeroBasedPage = Math.max(0, page - 1);
         
+        // Convert LocalDate to LocalDateTime (start of day and end of day)
+        LocalDateTime startDateTime = startDate != null ? startDate.atStartOfDay() : null;
+        LocalDateTime endDateTime = endDate != null ? endDate.plusDays(1).atStartOfDay().minusNanos(1) : null;
+        
         // Build notification filter request
         NotificationFilterRequest filter = NotificationFilterRequest.builder()
                 .readFlag(readFlag)
-                .createdAfter(startDate)
-                .createdBefore(endDate)
+                .createdAfter(startDateTime)
+                .createdBefore(endDateTime)
                 .searchText(search)
                 .build();
         

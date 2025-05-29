@@ -2,8 +2,10 @@ package com.sofrecom.tickit.impl;
 
 import com.sofrecom.tickit.dto.TicketActivityCommentRequest;
 import com.sofrecom.tickit.dto.TicketActivityCommentResponse;
+import com.sofrecom.tickit.exception.AccessDeniedException;
 import com.sofrecom.tickit.exception.ResourceNotFoundException;
 import com.sofrecom.tickit.mapper.TicketActivityCommentMapper;
+import com.sofrecom.tickit.model.ERole;
 import com.sofrecom.tickit.model.Ticket;
 import com.sofrecom.tickit.model.TicketActivity;
 import com.sofrecom.tickit.model.TicketActivityComment;
@@ -11,6 +13,7 @@ import com.sofrecom.tickit.repository.TicketActivityCommentRepository;
 import com.sofrecom.tickit.repository.TicketActivityRepository;
 import com.sofrecom.tickit.repository.TicketRepository;
 import com.sofrecom.tickit.service.TicketActivityCommentService;
+import com.sofrecom.tickit.util.AuthUtils;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +37,7 @@ public class TicketActivityCommentServiceImpl implements TicketActivityCommentSe
     private final TicketActivityRepository activityRepository;
     private final TicketActivityCommentRepository commentRepository;
     private final TicketActivityCommentMapper commentMapper;
+    private final AuthUtils authUtils; // Inject AuthUtils
 
     @Override
     @Transactional
@@ -99,9 +103,21 @@ public class TicketActivityCommentServiceImpl implements TicketActivityCommentSe
     @Override
     @Transactional
     public void deleteComment(UUID ticketId, Long activityId, Long commentId) {
+        // Get validated comment
         TicketActivityComment comment = getValidatedComment(ticketId, activityId, commentId);
         
-        // Soft delete
+        // Get authenticated username
+        String authenticatedUsername = authUtils.getAuthenticatedUsername();
+        
+        // Check permissions: admin/direction can delete any comment, others can only delete their own
+        boolean isAdmin = authUtils.hasAnyRole(ERole.ROLE_ADMIN, ERole.ROLE_DIRECTION);
+        boolean isCommentOwner = comment.getUsername().equals(authenticatedUsername);
+        
+        if (!isAdmin && !isCommentOwner) {
+            throw new AccessDeniedException("You don't have permission to delete this comment");
+        }
+        
+        // Proceed with soft delete
         comment.setDeleted(true);
         comment.setDeletedAt(LocalDateTime.now());
         

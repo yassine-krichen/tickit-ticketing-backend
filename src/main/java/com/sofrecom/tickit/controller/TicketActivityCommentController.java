@@ -183,6 +183,8 @@ public class TicketActivityCommentController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "204", 
                    description = "Comment deleted successfully"),
+        @ApiResponse(responseCode = "403", 
+                   description = "Forbidden - User doesn't have permission to delete this comment"),
         @ApiResponse(responseCode = "404", 
                    description = "Comment, ticket, or activity not found")
     })

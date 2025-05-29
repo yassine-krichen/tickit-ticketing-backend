@@ -1,5 +1,7 @@
 package com.sofrecom.tickit.util;
 
+import java.util.Collection;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -8,6 +10,7 @@ import org.springframework.stereotype.Component;
 
 import com.sofrecom.tickit.impl.UserDetailsImpl;
 import com.sofrecom.tickit.model.Collaborateur;
+import com.sofrecom.tickit.model.ERole;
 import com.sofrecom.tickit.model.Equipe;
 import com.sofrecom.tickit.repository.CollaborateurRepository;
 
@@ -214,5 +217,28 @@ public class AuthUtils {
         }
         
         return result.toString().trim();
+    }
+
+    /**
+     * Checks if the authenticated user has any of the specified roles.
+     *
+     * @param roles The roles to check for
+     * @return true if the user has any of the specified roles, false otherwise
+     */
+    public boolean hasAnyRole(ERole... roles) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return false;
+        }
+        
+        Collection<? extends GrantedAuthority> authorities = authentication.getAuthorities();
+        for (ERole role : roles) {
+            if (authorities.stream().anyMatch(authority -> 
+                    authority.getAuthority().equals(role.name()))) {
+                return true;
+            }
+        }
+        
+        return false;
     }
 }
