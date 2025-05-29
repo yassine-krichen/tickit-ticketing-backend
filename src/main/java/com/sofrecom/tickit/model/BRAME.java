@@ -17,13 +17,13 @@ public class BRAME extends Acte_traitement {
 	private Date dateRetourBan;
 	private String phase ;
 
-	public BRAME( String cog, String motif, String type_element, String commentaire, Prestation type_prestation,int quantite, String statutFacturation, Date dateReception, Date dateDeadline, String ui ) {
+	public BRAME( String cog, String motif, String type_element, String commentaire, Prestation type_prestation,float quantite, String statutFacturation, Date dateReception, Date dateDeadline, String ui ) {
 		super(motif, type_element,commentaire,type_prestation, quantite, statutFacturation, dateReception, dateDeadline);
 		this.cog = cog;
 		this.ui = ui;
 	}
 //Constr de filtrage
-	public BRAME(Prestation type_prestation, String type_element,Tarification tarif, int quantite, Date dateReception, Date dateLivraison, Date dateValidation, String affectation, int duree, String commentaire, String motif, String statutFacturation,Date dateDeadline,String priorite,String classification, String ui, String cog, Date dateDepBan, Date dateRetourBan, String phase, String codeBanbou, String codeIMB) {
+	public BRAME(Prestation type_prestation, String type_element,Tarification tarif, float quantite, Date dateReception, Date dateLivraison, Date dateValidation, String affectation, int duree, String commentaire, String motif, String statutFacturation,Date dateDeadline,String priorite,String classification, String ui, String cog, Date dateDepBan, Date dateRetourBan, String phase, String codeBanbou, String codeIMB) {
 		super(type_prestation, type_element,tarif, quantite, dateReception, dateLivraison, dateValidation, affectation, duree, commentaire, motif, statutFacturation,dateDeadline,priorite, classification);
 		this.ui = ui;
 		this.cog = cog;
@@ -34,7 +34,7 @@ public class BRAME extends Acte_traitement {
 		this.codeIMB=codeIMB;
 	}
 
-	public BRAME(Prestation type_prestation, String type_element, int quantite, String statutFacturation, String motif,Date dateReception,String commentaire, String cog, String ui, String phase) {
+	public BRAME(Prestation type_prestation, String type_element, float quantite, String statutFacturation, String motif,Date dateReception,String commentaire, String cog, String ui, String phase) {
 		super(type_prestation, type_element, quantite, statutFacturation,motif,dateReception,commentaire);
 		this.cog = cog;
 		this.ui = ui;
@@ -122,6 +122,5 @@ public class BRAME extends Acte_traitement {
 
 	public BRAME() {
 	}
-
 
 }

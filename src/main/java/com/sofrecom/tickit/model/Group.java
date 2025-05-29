@@ -3,7 +3,6 @@ package com.sofrecom.tickit.model;
 public class Group {
     private String name;
     private String image;
-    @SuppressWarnings("unused")
     private float formationGroup;
 
     public Group() {

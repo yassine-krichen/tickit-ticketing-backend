@@ -2,11 +2,13 @@ package com.sofrecom.tickit.model;
 
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
-import lombok.*;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 
 import javax.persistence.*;
-import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 
@@ -28,7 +30,7 @@ public class Dommage {
 
     private double montant;
 
-    private LocalDate dateLivraison;
+    private Date dateLivraison;
 
     @Transient
     private int dureeTraitement;
@@ -51,7 +53,7 @@ public class Dommage {
         }
     }
 
-    
+
 
     public Dommage() {
     }

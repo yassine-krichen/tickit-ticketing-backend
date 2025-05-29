@@ -1,5 +1,5 @@
 package com.sofrecom.tickit.model;
-
+import javax.persistence.Entity;
 
 
 

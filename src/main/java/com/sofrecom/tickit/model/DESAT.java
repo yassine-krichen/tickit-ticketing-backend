@@ -3,12 +3,12 @@ package com.sofrecom.tickit.model;
 import java.util.Date;
 
 import javax.persistence.Entity;
-
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
 
 @Entity
 public class DESAT  extends Acte_traitement{
-
-
 	private String zone;
 	private String fi;
 	private int nbreCoupleurs;
@@ -96,9 +96,10 @@ public class DESAT  extends Acte_traitement{
 	 public DESAT() {
 	    }
 	
-public DESAT(String cog,String fi,String motif, String type_element, String commentaire, Prestation type_prestation, int quantite,
+public DESAT(String cog,String fi,String motif, String type_element, String commentaire, Prestation type_prestation, float quantite,
 		String statutFacturation, Date dateReception, Date dateDeadline,String ui) {
 	super(motif, type_element, commentaire, type_prestation, quantite, statutFacturation, dateReception, dateDeadline);
+	// TODO Auto-generated constructor stub
 	this.cog= cog;
 	this.fi= fi;
 	this.ui = ui;
@@ -107,7 +108,7 @@ public DESAT(String cog,String fi,String motif, String type_element, String comm
 
 public DESAT(String zONE,String fI, String motifReaffectation,String statut_operatonnels,
 		Date date_reafictation,String cOG, String ui, Date date_liv_reafictation, Prestation type_prestation, String type_element,
-		Date dateReception, int quantite, 
+		Date dateReception, float quantite,
 		Date dateLivraison, Date dateValidation, String affectation, String commentaire,int duree,
 		String refTacheBPU, String motif,Date dateDeadline, String priorite, String statutFacturation, int nbreCoupleurs ) {
 	super(refTacheBPU, type_prestation, type_element, quantite, dateReception, dateLivraison, dateValidation,
@@ -128,13 +129,14 @@ public DESAT(String zONE,String fI, String motifReaffectation,String statut_oper
 
 
 // constructeur ajout dessat 
-public DESAT(String idacte, String refTacheBPU, Prestation type_prestation, String type_element, int quantite, Date dateReception,
+public DESAT(String idacte, String refTacheBPU, Prestation type_prestation, String type_element, float quantite, Date dateReception,
 		Date dateLivraison, Date dateValidation, String affectation, int duree, String commentaire, String motif,
 		String statutFacturation, Date dateReprise, String repriseFacturable, Date dateDeadline, String priorite, String classification,
 			 String zONE,String fI, String motifReaffectation,String statut_operatonnels,
 		Date date_reafictation,String cOG, String ui, Date date_liv_reafictation, int nbreCoupleurs) {
 	super(idacte, refTacheBPU, type_prestation, type_element, quantite, dateReception, dateLivraison, dateValidation, affectation,
 			duree, commentaire, motif, statutFacturation, dateReprise, repriseFacturable, dateDeadline, priorite, classification);
+	// TODO Auto-generated constructor stub
 	
 	this.zone = zONE;
 	this.fi = fI;
@@ -148,13 +150,14 @@ public DESAT(String idacte, String refTacheBPU, Prestation type_prestation, Stri
 }
 
 	// constructeur reaff dessat
-	public DESAT( Prestation type_prestation, String type_element, int quantite, Date dateReception,
+	public DESAT( Prestation type_prestation, String type_element, float quantite, Date dateReception,
 				 Date dateLivraison, Date dateValidation, String affectation, int duree, String commentaire, String motif,
 				 String statutFacturation, Date dateReprise, String repriseFacturable, Date dateDeadline, String priorite, String zONE,String fI,
 				 String motifReaffectation,String statut_operatonnels,
 				 Date date_reafictation,String cOG, String ui, Date date_liv_reafictation, int nbreCoupleurs) {
 		super( type_prestation, type_element, quantite, dateReception, dateLivraison, dateValidation, affectation,
 				duree, commentaire, motif, statutFacturation, dateReprise, repriseFacturable, dateDeadline, priorite);
+		// TODO Auto-generated constructor stub
 
 		this.zone = zONE;
 		this.fi = fI;
@@ -168,7 +171,7 @@ public DESAT(String idacte, String refTacheBPU, Prestation type_prestation, Stri
 	}
 
 //Filtrer Desat
-	public DESAT( Prestation type_prestation, String type_element, int quantite, Date dateReception,
+	public DESAT( Prestation type_prestation, String type_element, float quantite, Date dateReception,
 				 Date dateLivraison, String affectation, int duree, String commentaire, String motif,
 				 String statutFacturation, Date dateDeadline, String priorite, String zONE,String fI,
 				 String motifReaffectation,

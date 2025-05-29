@@ -16,13 +16,13 @@ public class Interconnexion extends Acte_traitement{
     private  String motifReaffectation;
 
 
-    public Interconnexion( String cog, String motif, String type_element, String commentaire, Prestation type_prestation,int quantite, String statutFacturation, Date dateReception, Date dateDeadline, String ui ) {
+    public Interconnexion( String cog, String motif, String type_element, String commentaire, Prestation type_prestation,float quantite, String statutFacturation, Date dateReception, Date dateDeadline, String ui ) {
         super(motif, type_element,commentaire,type_prestation, quantite, statutFacturation, dateReception, dateDeadline);
         this.cog = cog;
         this.ui = ui;
     }
     //constru de filtrage
-    public Interconnexion(Prestation type_prestation, String type_element,Tarification tarif, int quantite, Date dateReception, Date dateLivraison, Date dateValidation, String affectation, int duree, String commentaire, String motif, String statutFacturation,Date dateDeadline,String priorite,
+    public Interconnexion(Prestation type_prestation, String type_element,Tarification tarif, float quantite, Date dateReception, Date dateLivraison, Date dateValidation, String affectation, int duree, String commentaire, String motif, String statutFacturation,Date dateDeadline,String priorite,
                           String classification, String ui, String cog, Date dateDepBan, Date dateRetourBan, String phase) {
         super(type_prestation, type_element,tarif, quantite, dateReception, dateLivraison, dateValidation, affectation, duree, commentaire, motif, statutFacturation,dateDeadline,priorite, classification);
         this.ui = ui;

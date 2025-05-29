@@ -122,6 +122,7 @@ public class Esimb_Resp {
 			this.motif = motif;
 		}
 		public Esimb_Resp() {
+			// TODO Auto-generated constructor stub
 		}
 	
 	

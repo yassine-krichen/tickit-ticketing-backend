@@ -1,6 +1,12 @@
 package com.sofrecom.tickit.model;
 
-// I don't understand why this class still exists
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+
+import javax.persistence.*;
+import java.io.Serializable;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /*public class Groupe implements Serializable {
     @Id

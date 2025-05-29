@@ -2,9 +2,11 @@ package com.sofrecom.tickit.model;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.OneToMany;
+import java.util.Collection;
 import java.util.Date;
 import java.util.Set;
 
@@ -29,14 +31,14 @@ public class Nropm extends Acte_traitement{
     private Set<Pm> pms;
 
 
-    public Nropm(Prestation type_prestation, String type_element, int quantite, String statutFacturation, String motif,Date dateReception,Date dateDeadline, String cog) {
+    public Nropm(Prestation type_prestation, String type_element, float quantite, String statutFacturation, String motif,Date dateReception,Date dateDeadline, String cog) {
         super(type_prestation, type_element, quantite, statutFacturation,motif,dateReception,dateDeadline);
         this.cog = cog;
     }
 
 
     //Historique
-    public Nropm(Prestation type_prestation, String type_element, int quantite, Date dateReception, Date dateLivraison, Date dateValidation, String affectation, int duree, String commentaire, String motif, String statutFacturation,Date dateDeadline,String priorite,String classification, String uniteIntervention, String cog, Date dateReafectation, Date dateLivraisonReaffectation, String motifReaffectation, int nbreFI) {
+    public Nropm(Prestation type_prestation, String type_element, float quantite, Date dateReception, Date dateLivraison, Date dateValidation, String affectation, int duree, String commentaire, String motif, String statutFacturation,Date dateDeadline,String priorite,String classification, String uniteIntervention, String cog, Date dateReafectation, Date dateLivraisonReaffectation, String motifReaffectation, int nbreFI) {
         super(type_prestation, type_element, quantite, dateReception, dateLivraison, dateValidation, affectation, duree, commentaire, motif,statutFacturation,dateDeadline,priorite, classification);
         this.uniteIntervention = uniteIntervention;
         this.cog = cog;
@@ -47,14 +49,14 @@ public class Nropm extends Acte_traitement{
     }
 
     //SPI
-    public Nropm(Prestation type_prestation, String type_element, int quantite, String statutFacturation, String motif,Date dateReception,Date dateDeadline, String cog, String ui, String typeActivite) {
+    public Nropm(Prestation type_prestation, String type_element, float quantite, String statutFacturation, String motif,Date dateReception,Date dateDeadline, String cog, String ui, String typeActivite) {
         super(type_prestation, type_element, quantite, statutFacturation,motif,dateReception,dateDeadline);
         this.cog = cog;
         this.uniteIntervention = ui;
         this.typeActivite= typeActivite;
     }
 
-    public Nropm(Prestation type_prestation, String type_element, int quantite, Date dateReception, Date dateLivraison, Date dateValidation, String affectation, int duree, String commentaire, String motif, String statutFacturation,Date dateDeadline,String priorite,String classification, String uniteIntervention, String cog, Date dateReafectation, Date dateLivraisonReaffectation, String motifReaffectation, String typeActivite) {
+    public Nropm(Prestation type_prestation, String type_element, float quantite, Date dateReception, Date dateLivraison, Date dateValidation, String affectation, int duree, String commentaire, String motif, String statutFacturation,Date dateDeadline,String priorite,String classification, String uniteIntervention, String cog, Date dateReafectation, Date dateLivraisonReaffectation, String motifReaffectation, String typeActivite) {
         super(type_prestation, type_element, quantite, dateReception, dateLivraison, dateValidation, affectation, duree, commentaire, motif,statutFacturation,dateDeadline,priorite, classification);
         this.uniteIntervention = uniteIntervention;
         this.cog = cog;
@@ -65,7 +67,7 @@ public class Nropm extends Acte_traitement{
 
     }
 
-    public Nropm(String refTacheBPU, Prestation type_prestation, String type_element, int quantite, Date dateReception, Date dateLivraison, Date dateValidation, String affectation, int duree, String commentaire, String motif, String statutFacturation, Date dateReprise, String repriseFacturable, String uniteIntervention, String cog, Date dateReafectation, Date dateLivraisonReaffectation, String motifReaffectation, String typeActivite) {
+    public Nropm(String refTacheBPU, Prestation type_prestation, String type_element, float quantite, Date dateReception, Date dateLivraison, Date dateValidation, String affectation, int duree, String commentaire, String motif, String statutFacturation, Date dateReprise, String repriseFacturable, String uniteIntervention, String cog, Date dateReafectation, Date dateLivraisonReaffectation, String motifReaffectation, String typeActivite) {
         super(refTacheBPU, type_prestation, type_element, quantite, dateReception, dateLivraison, dateValidation, affectation, duree, commentaire, motif, statutFacturation, dateReprise, repriseFacturable);
         this.uniteIntervention = uniteIntervention;
         this.cog = cog;
@@ -80,7 +82,7 @@ public class Nropm extends Acte_traitement{
     }
 
 
-    public Nropm(String refTacheBPU, Prestation type_prestation, String type_element, int quantite, Date dateReception, Date dateLivraison, Date dateValidation, String affectation, int duree, String commentaire, String motif, String statutFacturation, Date dateReprise, String repriseFacturable, String uniteIntervention, String cog, Date dateReafectation, Date dateLivraisonReaffectation, String motifReaffectation, String typeActivite, Set<Pm> pms) {
+    public Nropm(String refTacheBPU, Prestation type_prestation, String type_element, float quantite, Date dateReception, Date dateLivraison, Date dateValidation, String affectation, int duree, String commentaire, String motif, String statutFacturation, Date dateReprise, String repriseFacturable, String uniteIntervention, String cog, Date dateReafectation, Date dateLivraisonReaffectation, String motifReaffectation, String typeActivite, Set<Pm> pms) {
         super(refTacheBPU, type_prestation, type_element, quantite, dateReception, dateLivraison, dateValidation, affectation, duree, commentaire, motif, statutFacturation, dateReprise, repriseFacturable);
         this.uniteIntervention = uniteIntervention;
         this.cog = cog;
@@ -93,7 +95,7 @@ public class Nropm extends Acte_traitement{
 
 
     // Constructeur d'ajout
-    public Nropm(Prestation type_prestation, String type_element, int quantite, Date dateReception, Date dateLivraison, Date dateValidation, String affectation, int duree, String commentaire, String motif, String statutFacturation,Date dateDeadline,String priorite, String classification, String uniteIntervention, String cog, int nbreFI,  String typeActivite, Set<Pm> pms) {
+    public Nropm(Prestation type_prestation, String type_element, float quantite, Date dateReception, Date dateLivraison, Date dateValidation, String affectation, int duree, String commentaire, String motif, String statutFacturation,Date dateDeadline,String priorite, String classification, String uniteIntervention, String cog, int nbreFI,  String typeActivite, Set<Pm> pms) {
         super(type_prestation, type_element, quantite, dateReception, dateLivraison, dateValidation, affectation, duree, commentaire, motif, statutFacturation,dateDeadline,priorite, classification);
         this.uniteIntervention = uniteIntervention;
         this.cog = cog;
@@ -102,7 +104,7 @@ public class Nropm extends Acte_traitement{
         this.pms = pms;
     }
     //constru de filtrage
-    public Nropm(Prestation type_prestation, String type_element,Tarification tarif, int quantite, Date dateReception, Date dateLivraison, Date dateValidation, String affectation, int duree, String commentaire, String motif, String statutFacturation,Date dateDeadline,String priorite,String classification, String uniteIntervention, String cog, int nbreFI,  String typeActivite, Set<Pm> pms) {
+    public Nropm(Prestation type_prestation, String type_element,Tarification tarif, float quantite, Date dateReception, Date dateLivraison, Date dateValidation, String affectation, int duree, String commentaire, String motif, String statutFacturation,Date dateDeadline,String priorite,String classification, String uniteIntervention, String cog, int nbreFI,  String typeActivite, Set<Pm> pms) {
         super(type_prestation, type_element,tarif, quantite, dateReception, dateLivraison, dateValidation, affectation, duree, commentaire, motif, statutFacturation,dateDeadline,priorite, classification);
         this.uniteIntervention = uniteIntervention;
         this.cog = cog;
@@ -113,7 +115,7 @@ public class Nropm extends Acte_traitement{
 
 
     // Constructeur de reaff
-    public Nropm(Prestation type_prestation, String type_element, int quantite, Date dateReception, Date dateLivraison, Date dateValidation, String affectation, int duree, String commentaire, String motif, String statutFacturation,Date dateDeadline,String priorite,String classification, String uniteIntervention, String cog, int nbreFI,  String typeActivite, Set<Pm> pms, String motifReaffectation) {
+    public Nropm(Prestation type_prestation, String type_element, float quantite, Date dateReception, Date dateLivraison, Date dateValidation, String affectation, int duree, String commentaire, String motif, String statutFacturation,Date dateDeadline,String priorite,String classification, String uniteIntervention, String cog, int nbreFI,  String typeActivite, Set<Pm> pms, String motifReaffectation) {
         super(type_prestation, type_element, quantite, dateReception, dateLivraison, dateValidation, affectation, duree, commentaire, motif, statutFacturation,dateDeadline,priorite, classification);
         this.uniteIntervention = uniteIntervention;
         this.cog = cog;
@@ -125,7 +127,7 @@ public class Nropm extends Acte_traitement{
 
 
 
-    public Nropm(String refTacheBPU, Prestation type_prestation, String type_element, int quantite, Date dateReception,
+    public Nropm(String refTacheBPU, Prestation type_prestation, String type_element, float quantite, Date dateReception,
                  Date dateLivraison, Date dateValidation, String affectation, int duree, String commentaire, String motif,
                  String uniteIntervention, String cog, int nbreFI, Date dateReafectation,
                  Date dateLivraisonReaffectation, String motifReaffectation, String typeActivite) {

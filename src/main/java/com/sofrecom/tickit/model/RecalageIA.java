@@ -14,8 +14,10 @@ public class RecalageIA extends Acte_traitement{
     private String commune;
     private String code_insee;
     private String priorite_rec;
-    private Double metre_effectue;
+    private Double metre_effectu;
+    private Float metre_effectue;
     private String statut_operationnel;
+    private String type;
     @Column(name = "metre_non_recale")
     private Double metre_nonrecale;
     @Temporal(TemporalType.DATE)
@@ -77,11 +79,11 @@ public class RecalageIA extends Acte_traitement{
         this.priorite_rec = priorite_rec;
     }
 
-    public Double getMetre_effectue() {
+    public Float getMetre_effectue() {
         return metre_effectue;
     }
 
-    public void setMetre_effectue(Double metre_effectue) {
+    public void setMetre_effectue(Float metre_effectue) {
         this.metre_effectue = metre_effectue;
     }
 
@@ -123,5 +125,13 @@ public class RecalageIA extends Acte_traitement{
 
     public void setDate_demande_injection(Date date_demande_injection) {
         this.date_demande_injection = date_demande_injection;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
     }
 }

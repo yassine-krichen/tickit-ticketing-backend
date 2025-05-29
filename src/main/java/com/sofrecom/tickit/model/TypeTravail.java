@@ -1,5 +1,6 @@
 package com.sofrecom.tickit.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import javax.persistence.*;
@@ -62,7 +63,7 @@ public class TypeTravail implements Serializable {
         this.nom = nom;
         this.colorCode = colorCode;
         this.abbreviation = abbreviation;
-        //this.formationColorCode = formationColorCode;
+        this.formationColorCode = formationColorCode;
     }
 
     public TypeTravail() {

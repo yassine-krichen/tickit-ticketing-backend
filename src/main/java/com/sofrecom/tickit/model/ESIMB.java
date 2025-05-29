@@ -45,7 +45,7 @@ public class ESIMB extends Acte_traitement {
 	
 	
 	
-	public ESIMB(String idacte, String refTacheBPU, Prestation type_prestation, String type_element, int quantite,
+	public ESIMB(String idacte, String refTacheBPU, Prestation type_prestation, String type_element, float quantite,
 			Date dateReception, Date dateLivraison, Date dateValidation,String affectation, int duree,
 			String priorite,  String commentaire, String motif, Date dateDeadline,
 			 String statutFacturation,String repriseFacturable,String classification, String codeBanbou, Date dateReprise,
@@ -58,7 +58,7 @@ public class ESIMB extends Acte_traitement {
 		this.dateVerification = dateVerification;
 	}
 	
-	public ESIMB(String idacte, String refTacheBPU, Prestation type_prestation, String type_element, int quantite,
+	public ESIMB(String idacte, String refTacheBPU, Prestation type_prestation, String type_element, float quantite,
 			Date dateReception, Date dateLivraison, Date dateValidation,String affectation, int duree,
 			String priorite,  String commentaire, String motif, Date dateDeadline,
 			 String statutFacturation,String repriseFacturable,String classification, String codeBanbou, Date dateReprise,
@@ -70,7 +70,7 @@ public class ESIMB extends Acte_traitement {
 		this.codeIMB = codeIMB;
 		this.dateVerification = dateVerification;
 	}
-	public ESIMB(String idacte, String refTacheBPU, Prestation type_prestation, String type_element, int quantite,
+	public ESIMB(String idacte, String refTacheBPU, Prestation type_prestation, String type_element, float quantite,
 			Date dateReception, Date dateLivraison, Date dateValidation, String affectation, int duree,
 			String commentaire, String motif, String statutFacturation, Date dateReprise, String repriseFacturable,
 			String codeBanbou, String codeIMB, Date dateVerification, boolean active) {
@@ -84,7 +84,7 @@ public class ESIMB extends Acte_traitement {
 	
 	
 	
-	public ESIMB(String idacte, String refTacheBPU, Prestation type_prestation, String type_element, int quantite, Date dateReception,
+	public ESIMB(String idacte, String refTacheBPU, Prestation type_prestation, String type_element, float quantite, Date dateReception,
 			Date dateLivraison, Date dateValidation, String affectation, int duree, String commentaire,
 			String motif, String statutFacturation,Date dateReprise, String repriseFacturable, 
 			String codeIMB, Date dateVerification,String codeBanbou) {

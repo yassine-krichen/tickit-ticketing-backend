@@ -1,13 +1,14 @@
 package com.sofrecom.tickit.model;
 
-
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import org.hibernate.annotations.GenericGenerator;
 import org.springframework.stereotype.Indexed;
-
 import javax.persistence.*;
+
 import java.util.Date;
+import java.util.List;
 
 
 @Indexed
@@ -17,6 +18,7 @@ import java.util.Date;
 @JsonIdentityInfo(
         generator = ObjectIdGenerators.PropertyGenerator.class,
         property = "idacte")
+
 public class Acte_traitement {
     @Id
     @GeneratedValue(generator = "system-uuid")
@@ -80,6 +82,8 @@ public class Acte_traitement {
     @JoinColumn(name = "codeTarif")
     Tarification tarif;
 
+    @Column(name = "quantityF")
+    private float quantiteF;
 
     @Column(name = "DateFacturation")
     private Date DateFacturation;
@@ -88,6 +92,9 @@ public class Acte_traitement {
     private boolean isDeleted;
     @Column(name = "classification")
     private String classification;
+
+    @Column(name = "statut")
+    private String statut;
 
     /**
      * The case this treatment act belongs to.
@@ -103,6 +110,7 @@ public class Acte_traitement {
     public void setAssociatedCase(Case associatedCase) {
         this.associatedCase = associatedCase;
     }
+
 
     public Acte_traitement(Date dateReception, Date dateLivraison, Date dateValidation,
                            String affectation, int duree, String commentaire, String motif,
@@ -229,9 +237,20 @@ public class Acte_traitement {
         return motif;
     }
 
-    public void setMotif(String motif) {
-        this.motif = motif;
+    @JsonSetter("motif")
+    public void setMotif(Object motif) {
+        if (motif == null) {
+            this.motif = "";
+        } else if (motif instanceof String) {
+            this.motif = (String) motif;
+        } else if (motif instanceof List) {
+            this.motif = String.join(", ", (List<String>) motif);
+        } else {
+            throw new IllegalArgumentException("Invalid type for motif: " + motif.getClass().getName());
+        }
     }
+
+
 
     public String getStatutFacturation() {
         return statutFacturation;
@@ -282,7 +301,7 @@ public class Acte_traitement {
     }
 
     public Acte_traitement(String idacte, String refTacheBPU, Prestation type_prestation, String type_element,
-                           int quantite, Date dateReception, Date dateLivraison, Date dateValidation, String affectation, int duree,
+                           float quantite, Date dateReception, Date dateLivraison, Date dateValidation, String affectation, int duree,
                            String commentaire, String motif, String statutFacturation, Date dateReprise, String repriseFacturable,
                            Date dateDeadline, String priorite, Tarification tarif) {
         super ();
@@ -290,7 +309,7 @@ public class Acte_traitement {
         this.refTacheBPU = refTacheBPU;
         this.typeprestation = type_prestation;
         this.type_element = type_element;
-        this.quantite = quantite;
+        this.quantiteF = quantite;
         this.dateReception = dateReception;
         this.dateLivraison = dateLivraison;
         this.dateValidation = dateValidation;
@@ -307,19 +326,19 @@ public class Acte_traitement {
     }
 
 
-    public Acte_traitement(Prestation type_prestation, String type_element, int quantite, String statutFacturation, String motif, Date dateReception) {
+    public Acte_traitement(Prestation type_prestation, String type_element, float quantite, String statutFacturation, String motif, Date dateReception) {
         this.typeprestation = type_prestation;
         this.type_element = type_element;
-        this.quantite = quantite;
+        this.quantiteF = quantite;
         this.statutFacturation = statutFacturation;
         this.motif = motif;
         this.dateReception = dateReception;
     }
 
-    public Acte_traitement(Prestation type_prestation, String type_element, int quantite, Date dateReception, Date dateLivraison, Date dateValidation, String affectation, int duree, String commentaire, String motif, String statutFacturation) {
+    public Acte_traitement(Prestation type_prestation, String type_element, float quantite, Date dateReception, Date dateLivraison, Date dateValidation, String affectation, int duree, String commentaire, String motif, String statutFacturation) {
         this.typeprestation = type_prestation;
         this.type_element = type_element;
-        this.quantite = quantite;
+        this.quantiteF = quantite;
         this.dateReception = dateReception;
         this.dateLivraison = dateLivraison;
         this.dateValidation = dateValidation;
@@ -331,14 +350,14 @@ public class Acte_traitement {
     }
 
 
-    public Acte_traitement(String refTacheBPU, Prestation type_prestation, String type_element, int quantite,
+    public Acte_traitement(String refTacheBPU, Prestation type_prestation, String type_element, float quantite,
                            Date dateReception, Date dateLivraison, Date dateValidation, String affectation, int duree,
                            String commentaire, String motif) {
         super ();
         this.refTacheBPU = refTacheBPU;
         this.typeprestation = type_prestation;
         this.type_element = type_element;
-        this.quantite = quantite;
+        this.quantiteF = quantite;
         this.dateReception = dateReception;
         this.dateLivraison = dateLivraison;
         this.dateValidation = dateValidation;
@@ -354,10 +373,10 @@ public class Acte_traitement {
         this.idacte = idacte;
     }
 
-    public Acte_traitement(Prestation type_prestation, String type_element, int quantite, String statutFacturation, String motif, Date dateReception, Date dateDeadline) {
+    public Acte_traitement(Prestation type_prestation, String type_element, float quantite, String statutFacturation, String motif, Date dateReception, Date dateDeadline) {
         this.typeprestation = type_prestation;
         this.type_element = type_element;
-        this.quantite = quantite;
+        this.quantiteF = quantite;
         this.statutFacturation = statutFacturation;
         this.motif = motif;
         this.dateReception = dateReception;
@@ -365,10 +384,10 @@ public class Acte_traitement {
     }
 
 
-    public Acte_traitement(Prestation type_prestation, String type_element, int quantite, Date dateReception, Date dateLivraison, Date dateValidation, String affectation, int duree, String commentaire, String motif, String statutFacturation, Date dateDeadline, String priorite, String classification) {
+    public Acte_traitement(Prestation type_prestation, String type_element, float quantite, Date dateReception, Date dateLivraison, Date dateValidation, String affectation, int duree, String commentaire, String motif, String statutFacturation, Date dateDeadline, String priorite, String classification) {
         this.typeprestation = type_prestation;
         this.type_element = type_element;
-        this.quantite = quantite;
+        this.quantiteF = quantite;
         this.dateReception = dateReception;
         this.dateLivraison = dateLivraison;
         this.dateValidation = dateValidation;
@@ -381,7 +400,6 @@ public class Acte_traitement {
         this.priorite = priorite;
         this.classification= classification;
     }
-    
     //Reaff
     public Acte_traitement(Prestation type_prestation,  Date dateReception, Date dateLivraison, Date dateValidation, String affectation, int duree, String commentaire, String motif, String statutFacturation, Date dateDeadline, String priorite) {
         this.typeprestation = type_prestation;
@@ -397,11 +415,11 @@ public class Acte_traitement {
         this.priorite = priorite;
     }
     //filtrage
-    public Acte_traitement(Prestation type_prestation, String type_element,Tarification tarif, int quantite, Date dateReception, Date dateLivraison, Date dateValidation, String affectation, int duree, String commentaire, String motif, String statutFacturation, Date dateDeadline, String priorite, String classification) {
+    public Acte_traitement(Prestation type_prestation, String type_element,Tarification tarif, float quantite, Date dateReception, Date dateLivraison, Date dateValidation, String affectation, int duree, String commentaire, String motif, String statutFacturation, Date dateDeadline, String priorite, String classification) {
         this.typeprestation = type_prestation;
         this.type_element = type_element;
         this.tarif=tarif;
-        this.quantite = quantite;
+        this.quantiteF = quantite;
         this.dateReception = dateReception;
         this.dateLivraison = dateLivraison;
         this.dateValidation = dateValidation;
@@ -420,10 +438,10 @@ public class Acte_traitement {
     }
 
     //brame
-    public Acte_traitement(Prestation type_prestation, String type_element, int quantite, String statutFacturation, String motif, Date dateReception, String commentaire) {
+    public Acte_traitement(Prestation type_prestation, String type_element, float quantite, String statutFacturation, String motif, Date dateReception, String commentaire) {
         this.typeprestation = type_prestation;
         this.type_element = type_element;
-        this.quantite = quantite;
+        this.quantiteF = quantite;
         this.statutFacturation = statutFacturation;
         this.motif = motif;
         this.dateReception = dateReception;
@@ -431,7 +449,7 @@ public class Acte_traitement {
     }
 
     public Acte_traitement(String idacte, String refTacheBPU, Prestation type_prestation,
-                           String type_element, int quantite, Date dateReception, Date dateLivraison, Date dateValidation,
+                           String type_element, float quantite, Date dateReception, Date dateLivraison, Date dateValidation,
                            String affectation, int duree, String commentaire, String motif, String statutFacturation,
                            Date dateReprise, String repriseFacturable) {
         super ();
@@ -439,7 +457,7 @@ public class Acte_traitement {
         this.refTacheBPU = refTacheBPU;
         this.typeprestation = type_prestation;
         this.type_element = type_element;
-        this.quantite = quantite;
+        this.quantiteF = quantite;
         this.dateReception = dateReception;
         this.dateLivraison = dateLivraison;
         this.dateValidation = dateValidation;
@@ -453,14 +471,14 @@ public class Acte_traitement {
     }
 
 
-    public Acte_traitement(String refTacheBPU, Prestation type_prestation, String type_element, int quantite,
+    public Acte_traitement(String refTacheBPU, Prestation type_prestation, String type_element, float quantite,
                            Date dateReception, Date dateLivraison, Date dateValidation, String affectation, int duree,
                            String commentaire, String motif, String statutFacturation, Date dateReprise, String repriseFacturable) {
         super ();
         this.refTacheBPU = refTacheBPU;
         this.typeprestation = type_prestation;
         this.type_element = type_element;
-        this.quantite = quantite;
+        this.quantiteF = quantite;
         this.dateReception = dateReception;
         this.dateLivraison = dateLivraison;
         this.dateValidation = dateValidation;
@@ -484,7 +502,7 @@ public class Acte_traitement {
     }
 
 
-    public Acte_traitement(String idacte, String refTacheBPU, Prestation type_prestation, String type_element, int quantite,
+    public Acte_traitement(String idacte, String refTacheBPU, Prestation type_prestation, String type_element, float quantite,
                            Date dateReception, Date dateLivraison, Date dateValidation, String affectation, Date dateDeadline,
                            String priorite, int duree, String commentaire, String motif, String statutFacturation, Date dateReprise,
                            String repriseFacturable, String classification) {
@@ -493,7 +511,7 @@ public class Acte_traitement {
         this.refTacheBPU = refTacheBPU;
         this.typeprestation = type_prestation;
         this.type_element = type_element;
-        this.quantite = quantite;
+        this.quantiteF = quantite;
         this.dateReception = dateReception;
         this.dateLivraison = dateLivraison;
         this.dateValidation = dateValidation;
@@ -509,7 +527,7 @@ public class Acte_traitement {
         this.classification=classification;
     }
 //Grafic
-    public Acte_traitement(String idacte, String refTacheBPU, Prestation type_prestation, String type_element, int quantite,
+    public Acte_traitement(String idacte, String refTacheBPU, Prestation type_prestation, String type_element, float quantite,
                            Date dateReception, Date dateLivraison, Date dateValidation, String affectation, Date dateDeadline,
                            String priorite, int duree, String commentaire, String motif, String statutFacturation, Date dateReprise,
                            String repriseFacturable) {
@@ -518,7 +536,7 @@ public class Acte_traitement {
         this.refTacheBPU = refTacheBPU;
         this.typeprestation = type_prestation;
         this.type_element = type_element;
-        this.quantite = quantite;
+        this.quantiteF = quantite;
         this.dateReception = dateReception;
         this.dateLivraison = dateLivraison;
         this.dateValidation = dateValidation;
@@ -542,14 +560,14 @@ public class Acte_traitement {
         this.motif = motif;
     }
 
-    public Acte_traitement(String refTacheBPU, Prestation type_prestation, String type_element, int quantite,
+    public Acte_traitement(String refTacheBPU, Prestation type_prestation, String type_element, float quantite,
                            Date dateReception, Date dateLivraison, Date dateValidation, String affectation, int duree,
                            String commentaire, String motif, Date dateDeadline, String priorite) {
         super ();
         this.refTacheBPU = refTacheBPU;
         this.typeprestation = type_prestation;
         this.type_element = type_element;
-        this.quantite = quantite;
+        this.quantiteF = quantite;
         this.dateReception = dateReception;
         this.dateLivraison = dateLivraison;
         this.dateValidation = dateValidation;
@@ -570,27 +588,27 @@ public class Acte_traitement {
     }
 
 
-    public Acte_traitement(String motif, String type_element, String commentaire, Prestation type_prestation, int quantite, String statutFacturation, Date dateReception, Date dateDeadline) {
+    public Acte_traitement(String motif, String type_element, String commentaire, Prestation type_prestation, float quantite, String statutFacturation, Date dateReception, Date dateDeadline) {
         super ();
         this.typeprestation = type_prestation;
         this.type_element = type_element;
         this.commentaire = commentaire;
         this.motif = motif;
-        this.quantite = quantite;
+        this.quantiteF = quantite;
         this.statutFacturation = statutFacturation;
         this.dateReception = dateReception;
         this.dateDeadline = dateDeadline;
     }
 
 
-    public Acte_traitement(String refTacheBPU, Prestation type_prestation, String type_element, int quantite,
+    public Acte_traitement(String refTacheBPU, Prestation type_prestation, String type_element, float quantite,
                            Date dateReception, Date dateLivraison, Date dateValidation, String affectation, int duree,
                            String commentaire, String motif, Date dateDeadline, String priorite, String StatutFacturation) {
         super ();
         this.refTacheBPU = refTacheBPU;
         this.typeprestation = type_prestation;
         this.type_element = type_element;
-        this.quantite = quantite;
+        this.quantiteF = quantite;
         this.dateReception = dateReception;
         this.dateLivraison = dateLivraison;
         this.dateValidation = dateValidation;
@@ -604,7 +622,7 @@ public class Acte_traitement {
 
     }
 
-    public Acte_traitement(String idacte, String refTacheBPU, Prestation type_prestation, String type_element, int quantite,
+    public Acte_traitement(String idacte, String refTacheBPU, Prestation type_prestation, String type_element, float quantite,
                            Date dateReception, Date dateLivraison, Date dateValidation, String affectation, int duree,
                            String commentaire, String motif, String statutFacturation, Date dateReprise, String repriseFacturable,
                            Date dateDeadline, String priorite, String classification) {
@@ -613,7 +631,7 @@ public class Acte_traitement {
         this.refTacheBPU = refTacheBPU;
         this.typeprestation = type_prestation;
         this.type_element = type_element;
-        this.quantite = quantite;
+        this.quantiteF = quantite;
         this.dateReception = dateReception;
         this.dateLivraison = dateLivraison;
         this.dateValidation = dateValidation;
@@ -630,7 +648,7 @@ public class Acte_traitement {
     }
 
 //XOIP
-    public Acte_traitement(String idacte, String refTacheBPU, Prestation type_prestation, String type_element, int quantite,
+    public Acte_traitement(String idacte, String refTacheBPU, Prestation type_prestation, String type_element, float quantite,
                            Date dateReception, Date dateLivraison, Date dateValidation, String affectation, int duree,
                            String commentaire, String motif, String statutFacturation, Date dateReprise, String repriseFacturable,
                            Date dateDeadline, String priorite) {
@@ -639,7 +657,7 @@ public class Acte_traitement {
         this.refTacheBPU = refTacheBPU;
         this.typeprestation = type_prestation;
         this.type_element = type_element;
-        this.quantite = quantite;
+        this.quantiteF = quantite;
         this.dateReception = dateReception;
         this.dateLivraison = dateLivraison;
         this.dateValidation = dateValidation;
@@ -655,14 +673,14 @@ public class Acte_traitement {
     }
 
     //Reaff desat
-    public Acte_traitement( Prestation type_prestation, String type_element, int quantite,
+    public Acte_traitement( Prestation type_prestation, String type_element, float quantite,
                             Date dateReception, Date dateLivraison, Date dateValidation, String affectation, int duree,
                             String commentaire, String motif, String statutFacturation, Date dateReprise, String repriseFacturable,
                             Date dateDeadline, String priorite) {
         super ();
         this.typeprestation = type_prestation;
         this.type_element = type_element;
-        this.quantite = quantite;
+        this.quantiteF = quantite;
         this.dateReception = dateReception;
         this.dateLivraison = dateLivraison;
         this.dateValidation = dateValidation;
@@ -692,7 +710,7 @@ public class Acte_traitement {
         this.commentaire = commentaire;
     }
 
-    public Acte_traitement(String refTacheBPU, Prestation type_prestation, String type_element, int quantite,
+    public Acte_traitement(String refTacheBPU, Prestation type_prestation, String type_element, float quantite,
                            Date dateReception, Date dateLivraison, Date dateValidation, String affectation, int duree,
                            String commentaire, String motif, String statutFacturation, Date dateReprise, String repriseFacturable,
                            Date dateDeadline, String priorite, Tarification tarif) {
@@ -700,7 +718,7 @@ public class Acte_traitement {
         this.refTacheBPU = refTacheBPU;
         this.typeprestation = type_prestation;
         this.type_element = type_element;
-        this.quantite = quantite;
+        this.quantiteF = quantite;
         this.dateReception = dateReception;
         this.dateLivraison = dateLivraison;
         this.dateValidation = dateValidation;
@@ -716,11 +734,11 @@ public class Acte_traitement {
         this.tarif = tarif;
     }
 
-    public Acte_traitement(Prestation typeprestation, String type_element, int quantite, Date dateReception, Date dateLivraison, String affectation, int duree, String commentaire, String motif, String statutFacturation, String priorite, Tarification tarif, Date dateFacturation) {
+    public Acte_traitement(Prestation typeprestation, String type_element, float quantite, Date dateReception, Date dateLivraison, String affectation, int duree, String commentaire, String motif, String statutFacturation, String priorite, Tarification tarif, Date dateFacturation) {
 
         this.typeprestation = typeprestation;
         this.type_element = type_element;
-        this.quantite = quantite;
+        this.quantiteF = quantite;
         this.dateReception = dateReception;
         this.dateLivraison = dateLivraison;
         this.affectation = affectation;
@@ -734,7 +752,7 @@ public class Acte_traitement {
     }
 
     public Acte_traitement(String idacte, Prestation typeprestation, String type_element,
-                           int quantite, Date dateReception, Date dateLivraison, String affectation, Date dateDeadline,
+                           float quantite, Date dateReception, Date dateLivraison, String affectation, Date dateDeadline,
                            String commentaire, int duree,
                            String motif, String statutFacturation, String repriseFacturable, Date dateReprise,
                            String priorite) {
@@ -743,7 +761,7 @@ public class Acte_traitement {
 
         this.typeprestation = typeprestation;
         this.type_element = type_element;
-        this.quantite = quantite;
+        this.quantiteF = quantite;
         this.dateReception = dateReception;
         this.dateLivraison = dateLivraison;
         this.affectation = affectation;
@@ -759,12 +777,12 @@ public class Acte_traitement {
 
 
     public Acte_traitement(Prestation typeprestation, String type_element,
-                           int quantite, Date dateReception, Date dateLivraison,
+                           float quantite, Date dateReception, Date dateLivraison,
                            String affectation, int duree, String commentaire,
                            String motif, String statutFacturation, Date dateDeadline,  String priorite) {
         this.typeprestation = typeprestation;
         this.type_element = type_element;
-        this.quantite = quantite;
+        this.quantiteF = quantite;
         this.dateReception = dateReception;
         this.dateLivraison = dateLivraison;
         this.affectation = affectation;
@@ -777,7 +795,7 @@ public class Acte_traitement {
     }
 
     //eya ajout, filtre
-    public Acte_traitement(String idacte,Prestation prestation, String type_element,int quantite,
+    public Acte_traitement(String idacte,Prestation prestation, String type_element,float quantite,
                            Date dateReception, Date dateLivraison,
                            String affectation, int duree, String commentaire,
                            String motif, String statutFacturation,  String priorite,String classification,
@@ -785,7 +803,7 @@ public class Acte_traitement {
         this.idacte = idacte;
         this.typeprestation = prestation;
         this.type_element = type_element;
-        this.quantite=quantite;
+        this.quantiteF=quantite;
         this.dateReception = dateReception;
         this.dateLivraison = dateLivraison;
         this.affectation = affectation;
@@ -810,14 +828,14 @@ public class Acte_traitement {
     }
     public Acte_traitement(String motif, String typeElement, String commentaire,
                            Prestation pres, String statutFacturation, Date dateReception,
-                           int quantite) {
+                           float quantite) {
         this.dateReception= dateReception;
         this.commentaire=commentaire;
         this.motif=motif;
         this.typeprestation=pres;
         this.type_element=typeElement;
         this.statutFacturation=statutFacturation;
-        this.quantite=quantite;
+        this.quantiteF=quantite;
     }
 
     public boolean isDeleted() {
@@ -826,6 +844,39 @@ public class Acte_traitement {
 
     public void setDeleted(boolean deleted) {
         isDeleted = deleted;
+    }
+
+    public Prestation getTypeprestation() {
+        return typeprestation;
+    }
+
+    public void setTypeprestation(Prestation typeprestation) {
+        this.typeprestation = typeprestation;
+    }
+
+    public String getStatut() {
+        return statut;
+    }
+
+    public void setStatut(String statut) {
+        this.statut = statut;
+    }
+
+    public float getQuantiteF() {
+        return quantiteF;
+    }
+
+    public void     setQuantiteF(float quantiteF) {
+        this.quantiteF = quantiteF;
+    }
+
+    public Acte_traitement(Date dateReception, Date dateLivraison, String affectation, int duree, String commentaire, String statutFacturation) {
+        this.dateReception = dateReception;
+        this.dateLivraison = dateLivraison;
+        this.affectation = affectation;
+        this.duree = duree;
+        this.commentaire = commentaire;
+        this.statutFacturation = statutFacturation;
     }
 }
 

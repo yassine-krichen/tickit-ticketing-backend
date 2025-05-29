@@ -1,13 +1,20 @@
 package com.sofrecom.tickit.model;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 
+import org.hibernate.annotations.GenericGenerator;
+
 @Entity
 public class Tarification {
 	@Id
+	//@GeneratedValue(generator="system-uuid")
+	//@GenericGenerator(name="system-uuid", strategy = "uuid")
 	private String codeTarif;
 	@ManyToOne
 	@JoinColumn(name = "idPrestation")
