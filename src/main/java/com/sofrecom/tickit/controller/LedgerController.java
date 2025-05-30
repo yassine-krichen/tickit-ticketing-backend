@@ -20,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -31,6 +32,8 @@ import javax.validation.Valid;
 @RequiredArgsConstructor
 @Tag(name = "Ledger Management", description = "APIs for blockchain ledger operations")
 public class LedgerController {
+
+    private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger(LedgerController.class);
 
     private final LedgerService ledgerService;
     private final LedgerEntryMapper ledgerEntryMapper;
@@ -249,5 +252,34 @@ public class LedgerController {
             return ResponseEntity.status(500)
                 .body("Error searching ledger entries: " + e.getMessage());
         }
+    }
+
+    // Add this endpoint to LedgerController class
+    @Operation(summary = "Test endpoint for external system integration", 
+          description = "Logs incoming payloads and returns a mock response")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Payload received and logged"),
+        @ApiResponse(responseCode = "400", description = "Invalid payload format")
+    })
+    @PostMapping("/test-integration")
+    public ResponseEntity<LedgerEntryResponse> testIntegration(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @Valid @RequestBody LedgerEntryRequest request) {
+        
+        LOGGER.info("=== Test Integration Endpoint Called ===");
+        LOGGER.info("Auth Header: {}", authHeader);
+        LOGGER.info("Request Payload: {}", request);
+        
+        // Create mock response
+        LedgerEntryResponse response = LedgerEntryResponse.builder()
+            .id(UUID.randomUUID())
+            .entityType(request.getEntityType())
+            .entityId(request.getEntityId())
+            .timestamp(LocalDateTime.now())
+            .status("TEST_SUCCESS")
+            .message("Payload received and logged successfully")
+            .build();
+
+        return ResponseEntity.ok(response);
     }
 }

@@ -24,10 +24,11 @@ public class LedgerEntryRequest {
     @Pattern(regexp = "CASE|TREATMENT_ACT", message = "Entity type must be either CASE or TREATMENT_ACT")
     private String entityType;
 
-    @NotBlank(message = "Case ID is required")
+    // for testing purposes, this is set to not required
+    // @NotBlank(message = "Case ID is required")
     private String caseId;
 
-    @NotBlank(message = "User fingerprint is required")
+    // @NotBlank(message = "User fingerprint is required")
     // Example pattern: letters separated by dots: last_name.first_name.role.team (e.g. "reed.noa.producer.tunisia")
     @Pattern(regexp = "^[a-zA-Z]+\\.[a-zA-Z]+\\.[a-zA-Z]+\\.[a-zA-Z]+$", 
              message = "Fingerprint must be in format last_name.first_name.role.team")
