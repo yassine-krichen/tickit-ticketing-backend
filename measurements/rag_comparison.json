@@ -1,0 +1,213 @@
+{
+  "summary": {
+    "avg_tokens_before": 612.1,
+    "avg_tokens_after": 244.1,
+    "token_reduction_pct": 60.1,
+    "avg_retrieval_latency_ms": 20.39,
+    "precision_at_1": 0.9,
+    "precision_at_1_raw": "18/20",
+    "total_records_in_store": 90
+  },
+  "per_query": [
+    {
+      "index": 1,
+      "query": "Cable cut during road excavation by water company",
+      "expected_type": "cable_damage",
+      "top1_type": "cable_damage",
+      "relevant": true,
+      "before_tokens": 623,
+      "after_tokens": 241,
+      "retrieval_latency_ms": 43.84
+    },
+    {
+      "index": 2,
+      "query": "Fiber broken by crane at construction site",
+      "expected_type": "cable_damage",
+      "top1_type": "cable_damage",
+      "relevant": true,
+      "before_tokens": 621,
+      "after_tokens": 241,
+      "retrieval_latency_ms": 19.22
+    },
+    {
+      "index": 3,
+      "query": "ONT device not responding after power surge",
+      "expected_type": "equipment_failure",
+      "top1_type": "equipment_failure",
+      "relevant": true,
+      "before_tokens": 597,
+      "after_tokens": 250,
+      "retrieval_latency_ms": 19.81
+    },
+    {
+      "index": 4,
+      "query": "Permit for road trench work rejected by municipality",
+      "expected_type": "permit_delay",
+      "top1_type": "permit_delay",
+      "relevant": true,
+      "before_tokens": 595,
+      "after_tokens": 250,
+      "retrieval_latency_ms": 19.44
+    },
+    {
+      "index": 5,
+      "query": "Client not home for scheduled fiber installation",
+      "expected_type": "access_issues",
+      "top1_type": "access_issues",
+      "relevant": true,
+      "before_tokens": 624,
+      "after_tokens": 232,
+      "retrieval_latency_ms": 18.27
+    },
+    {
+      "index": 6,
+      "query": "Missing fiche navette document for treatment act",
+      "expected_type": "documentation_issues",
+      "top1_type": "documentation_issues",
+      "relevant": true,
+      "before_tokens": 605,
+      "after_tokens": 249,
+      "retrieval_latency_ms": 19.86
+    },
+    {
+      "index": 7,
+      "query": "GIS data shows wrong duct route in field survey",
+      "expected_type": "si_terrain_mismatch",
+      "top1_type": "si_terrain_mismatch",
+      "relevant": true,
+      "before_tokens": 621,
+      "after_tokens": 257,
+      "retrieval_latency_ms": 21.6
+    },
+    {
+      "index": 8,
+      "query": "Heavy rain preventing outdoor fiber splicing",
+      "expected_type": "weather_conditions",
+      "top1_type": "weather_conditions",
+      "relevant": true,
+      "before_tokens": 603,
+      "after_tokens": 243,
+      "retrieval_latency_ms": 21.13
+    },
+    {
+      "index": 9,
+      "query": "No FTTH technician available for deployment",
+      "expected_type": "resource_shortage",
+      "top1_type": "resource_shortage",
+      "relevant": true,
+      "before_tokens": 589,
+      "after_tokens": 236,
+      "retrieval_latency_ms": 20.45
+    },
+    {
+      "index": 10,
+      "query": "Optical signal attenuation too high on new cable",
+      "expected_type": "signal_quality",
+      "top1_type": "equipment_failure",
+      "relevant": false,
+      "before_tokens": 596,
+      "after_tokens": 248,
+      "retrieval_latency_ms": 20.53
+    },
+    {
+      "index": 11,
+      "query": "Vandalized fiber cable at street distribution box",
+      "expected_type": "cable_damage",
+      "top1_type": "cable_damage",
+      "relevant": true,
+      "before_tokens": 625,
+      "after_tokens": 246,
+      "retrieval_latency_ms": 20.32
+    },
+    {
+      "index": 12,
+      "query": "Environmental objection blocking municipal permit",
+      "expected_type": "permit_delay",
+      "top1_type": "permit_delay",
+      "relevant": true,
+      "before_tokens": 595,
+      "after_tokens": 231,
+      "retrieval_latency_ms": 18.83
+    },
+    {
+      "index": 13,
+      "query": "Security guard denying access to equipment room",
+      "expected_type": "access_issues",
+      "top1_type": "access_issues",
+      "relevant": true,
+      "before_tokens": 629,
+      "after_tokens": 234,
+      "retrieval_latency_ms": 18.32
+    },
+    {
+      "index": 14,
+      "query": "OLT line card failure at central office",
+      "expected_type": "equipment_failure",
+      "top1_type": "equipment_failure",
+      "relevant": true,
+      "before_tokens": 609,
+      "after_tokens": 242,
+      "retrieval_latency_ms": 18.96
+    },
+    {
+      "index": 15,
+      "query": "NMS shows wrong subscriber count for cabinet",
+      "expected_type": "si_terrain_mismatch",
+      "top1_type": "si_terrain_mismatch",
+      "relevant": true,
+      "before_tokens": 603,
+      "after_tokens": 253,
+      "retrieval_latency_ms": 18.96
+    },
+    {
+      "index": 16,
+      "query": "Cable documentation incomplete after sub-contractor work",
+      "expected_type": "documentation_issues",
+      "top1_type": "documentation_issues",
+      "relevant": true,
+      "before_tokens": 617,
+      "after_tokens": 240,
+      "retrieval_latency_ms": 18.27
+    },
+    {
+      "index": 17,
+      "query": "Fiber route flooded during heavy storm",
+      "expected_type": "weather_conditions",
+      "top1_type": "cable_damage",
+      "relevant": false,
+      "before_tokens": 622,
+      "after_tokens": 240,
+      "retrieval_latency_ms": 17.39
+    },
+    {
+      "index": 18,
+      "query": "Equipment stock exhausted at regional depot",
+      "expected_type": "resource_shortage",
+      "top1_type": "resource_shortage",
+      "relevant": true,
+      "before_tokens": 612,
+      "after_tokens": 246,
+      "retrieval_latency_ms": 16.56
+    },
+    {
+      "index": 19,
+      "query": "Contaminated connectors in distribution cabinet",
+      "expected_type": "signal_quality",
+      "top1_type": "signal_quality",
+      "relevant": true,
+      "before_tokens": 618,
+      "after_tokens": 247,
+      "retrieval_latency_ms": 17.28
+    },
+    {
+      "index": 20,
+      "query": "Fiber cable damaged by rodents near agricultural area",
+      "expected_type": "cable_damage",
+      "top1_type": "cable_damage",
+      "relevant": true,
+      "before_tokens": 638,
+      "after_tokens": 256,
+      "retrieval_latency_ms": 18.74
+    }
+  ]
+}
