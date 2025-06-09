@@ -14,13 +14,10 @@ public class WebSocketSecurityConfig extends AbstractSecurityWebSocketMessageBro
     @Override
     protected void configureInbound(MessageSecurityMetadataSourceRegistry messages) {
         // Allow all message types - authentication happens in channel interceptor
-        messages
-            // Allow connection establishment
-            .nullDestMatcher().permitAll()
-            // User-specific destinations require authentication
-            .simpDestMatchers("/user/**").authenticated()
-            // All other destinations - be permissive, validate in service layer
-            .anyMessage().permitAll();
+        // Authentication is enforced by WebSocketAuthChannelInterceptor at CONNECT time.
+        // Destination-level security is not enforced here — @SendToUser already
+        // restricts user-queue messages to the authenticated principal.
+        messages.anyMessage().permitAll();
     }
 
     @Override
