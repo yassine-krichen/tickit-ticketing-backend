@@ -1,0 +1,181 @@
+[ {
+  "llmCallMs" : 10440,
+  "subject" : "Cable damaged during excavation on Rue de la Paix",
+  "contextRetrievalMs" : 0,
+  "totalMs" : 10440,
+  "description" : "Physical fiber cut by contractor",
+  "ragEnabled" : false,
+  "timestamp" : "2026-06-12T18:30:24.456881900",
+  "status" : "success"
+}, {
+  "llmCallMs" : 3907,
+  "subject" : "Permit delay for trench work in Zone Industrielle",
+  "contextRetrievalMs" : 0,
+  "totalMs" : 3907,
+  "description" : "Municipal authorization pending",
+  "ragEnabled" : false,
+  "timestamp" : "2026-06-12T18:30:34.897417300",
+  "status" : "success"
+}, {
+  "llmCallMs" : 7016,
+  "subject" : "ONT equipment failure at client premises",
+  "contextRetrievalMs" : 0,
+  "totalMs" : 7016,
+  "description" : "Device not powering on after swap",
+  "ragEnabled" : false,
+  "timestamp" : "2026-06-12T18:30:38.804622400",
+  "status" : "success"
+}, {
+  "llmCallMs" : 5375,
+  "subject" : "Access denied at residence building for installation",
+  "contextRetrievalMs" : 0,
+  "totalMs" : 5375,
+  "description" : "Concierge unavailable",
+  "ragEnabled" : false,
+  "timestamp" : "2026-06-12T18:30:45.820844800",
+  "status" : "success"
+}, {
+  "llmCallMs" : 5960,
+  "subject" : "Missing fiche navette documentation for BRAME act",
+  "contextRetrievalMs" : 0,
+  "totalMs" : 5960,
+  "description" : "Document not submitted",
+  "ragEnabled" : false,
+  "timestamp" : "2026-06-12T18:30:51.196599700",
+  "status" : "success"
+}, {
+  "llmCallMs" : 6239,
+  "subject" : "SI-Terrain mismatch in Ariana sector GIS data",
+  "contextRetrievalMs" : 0,
+  "totalMs" : 6239,
+  "description" : "Route shown in system does not exist",
+  "ragEnabled" : false,
+  "timestamp" : "2026-06-12T18:30:57.156945500",
+  "status" : "success"
+}, {
+  "llmCallMs" : 6456,
+  "subject" : "Optical signal attenuation too high on new cable",
+  "contextRetrievalMs" : 0,
+  "totalMs" : 6456,
+  "description" : "Loss exceeds -30dB threshold",
+  "ragEnabled" : false,
+  "timestamp" : "2026-06-12T18:31:03.396662200",
+  "status" : "success"
+}, {
+  "llmCallMs" : 3554,
+  "subject" : "Weather conditions preventing outdoor splicing work",
+  "contextRetrievalMs" : 0,
+  "totalMs" : 3554,
+  "description" : "Heavy rain forecast for 3 days",
+  "ragEnabled" : false,
+  "timestamp" : "2026-06-12T18:31:09.853487400",
+  "status" : "success"
+}, {
+  "llmCallMs" : 3763,
+  "subject" : "Technician resource shortage for GRAFIC deployment",
+  "contextRetrievalMs" : 0,
+  "totalMs" : 3763,
+  "description" : "Team unavailable until next week",
+  "ragEnabled" : false,
+  "timestamp" : "2026-06-12T18:31:13.408052",
+  "status" : "success"
+}, {
+  "llmCallMs" : 6855,
+  "subject" : "Cable route blocked by existing water pipes",
+  "contextRetrievalMs" : 0,
+  "totalMs" : 6855,
+  "description" : "Infrastructure conflict on main street",
+  "ragEnabled" : false,
+  "timestamp" : "2026-06-12T18:31:17.171179",
+  "status" : "success"
+}, {
+  "llmCallMs" : 5374,
+  "subject" : "Fiber splice damaged during BRAME reconnexion",
+  "contextRetrievalMs" : 0,
+  "totalMs" : 5374,
+  "description" : "Fusion splice failed quality test",
+  "ragEnabled" : false,
+  "timestamp" : "2026-06-12T18:31:24.026988700",
+  "status" : "success"
+}, {
+  "llmCallMs" : 5748,
+  "subject" : "Client not reachable for appointment confirmation",
+  "contextRetrievalMs" : 0,
+  "totalMs" : 5748,
+  "description" : "Phone number incorrect in system",
+  "ragEnabled" : false,
+  "timestamp" : "2026-06-12T18:31:29.401673400",
+  "status" : "success"
+}, {
+  "llmCallMs" : 6177,
+  "subject" : "Sub-contractor delayed on BO RIP phase",
+  "contextRetrievalMs" : 0,
+  "totalMs" : 6177,
+  "description" : "External team behind schedule",
+  "ragEnabled" : false,
+  "timestamp" : "2026-06-12T18:31:35.150269800",
+  "status" : "success"
+}, {
+  "llmCallMs" : 5644,
+  "subject" : "Equipment delivery delayed from warehouse",
+  "contextRetrievalMs" : 0,
+  "totalMs" : 5644,
+  "description" : "ONT stock unavailable locally",
+  "ragEnabled" : false,
+  "timestamp" : "2026-06-12T18:31:41.327759800",
+  "status" : "success"
+}, {
+  "llmCallMs" : 4606,
+  "subject" : "Permit for aerial cable crossing expired",
+  "contextRetrievalMs" : 0,
+  "totalMs" : 4606,
+  "description" : "Renewal took longer than expected",
+  "ragEnabled" : false,
+  "timestamp" : "2026-06-12T18:31:46.972242900",
+  "status" : "success"
+}, {
+  "llmCallMs" : 4249,
+  "subject" : "GC excavation blocked by unmarked underground utilities",
+  "contextRetrievalMs" : 0,
+  "totalMs" : 4249,
+  "description" : "Cable strike risk identified",
+  "ragEnabled" : false,
+  "timestamp" : "2026-06-12T18:31:51.578757500",
+  "status" : "success"
+}, {
+  "llmCallMs" : 5034,
+  "subject" : "GEORESO cable route flooded after heavy rain",
+  "contextRetrievalMs" : 0,
+  "totalMs" : 5034,
+  "description" : "Duct system filled with water",
+  "ragEnabled" : false,
+  "timestamp" : "2026-06-12T18:31:55.828728900",
+  "status" : "success"
+}, {
+  "llmCallMs" : 5644,
+  "subject" : "Documentation incomplete for MUTATION NATNE act",
+  "contextRetrievalMs" : 0,
+  "totalMs" : 5644,
+  "description" : "Missing signature on bandeau",
+  "ragEnabled" : false,
+  "timestamp" : "2026-06-12T18:32:00.862946300",
+  "status" : "success"
+}, {
+  "llmCallMs" : 3830,
+  "subject" : "Optical power meter showing inconsistent readings",
+  "contextRetrievalMs" : 0,
+  "totalMs" : 3830,
+  "description" : "Equipment calibration required",
+  "ragEnabled" : false,
+  "timestamp" : "2026-06-12T18:32:06.507630900",
+  "status" : "success"
+}, {
+  "llmCallMs" : 6414,
+  "subject" : "XOIP interconnexion phase blocked by third-party RIP",
+  "contextRetrievalMs" : 0,
+  "totalMs" : 6414,
+  "description" : "Handoff agreement not signed",
+  "ragEnabled" : false,
+  "timestamp" : "2026-06-12T18:32:10.338097100",
+  "status" : "success"
+} ]

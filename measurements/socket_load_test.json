@@ -1,0 +1,20 @@
+{
+  "test_config": {
+    "concurrent_clients": 30,
+    "events_fired": 50,
+    "measuring_client": "VU 1 — /user/queue/echo roundtrip",
+    "endpoint": "ws://localhost:8080/ws",
+    "protocol": "STOMP over native WebSocket",
+    "auth": "JWT in STOMP CONNECT Authorization header"
+  },
+  "results": {
+    "p90_ms": 7,
+    "p95_ms": 35,
+    "p99_ms": null,
+    "avg_ms": 8,
+    "min_ms": 2,
+    "max_ms": 86,
+    "events_delivered": 100,
+    "connection_errors": 0
+  }
+}

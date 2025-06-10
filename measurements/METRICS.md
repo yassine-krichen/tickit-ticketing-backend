@@ -19,16 +19,19 @@
 
 ## Task 2 · WebSocket Load Test
 
-**Method:** k6 script — 30 concurrent STOMP clients, 50 ticket state change events, measure delivery latency (embed timestamp in payload, compute on MESSAGE receipt).
+**Method:** k6 script — 30 concurrent STOMP clients over native WebSocket (`/ws`), VU 1 fires 50 ticket state events to `/app/echo`, measures roundtrip latency via embedded `sentAt` timestamp.
 
 | Metric | Value |
 |---|---|
 | Concurrent clients | 30 |
-| Events fired | 50 |
-| P50 latency (ms) | — |
-| P95 latency (ms) | — |
-| P99 latency (ms) | — |
-| Drop rate (%) | — |
+| Events measured | 100 (2 iterations × 50) |
+| Min latency (ms) | 2 |
+| Avg latency (ms) | 8 |
+| P90 latency (ms) | 7 |
+| P95 latency (ms) | 35 |
+| Max latency (ms) | 86 |
+| Connection errors | 0 |
+| Drop rate (%) | 0 |
 
 > Full results: `measurements/socket_load_test.json`
 
@@ -40,12 +43,13 @@
 
 | Metric | ms |
 |---|---|
-| Min total | — |
-| Max total | — |
-| Avg total | — |
-| P95 total | — |
-| Avg contextRetrieval | — |
-| Avg llmCall | — |
-| Avg responseParser | — |
+| Min total | 3 554 |
+| Max total | 10 440 |
+| Avg total | 5 614 |
+| P50 total | 5 644 |
+| P95 total | 7 016 |
+| Avg contextRetrieval | 0 (RAG disabled, DB fallback) |
+| Avg llmCall | 5 614 (hermes3:3b, CPU) |
+| Avg responseParser | ~1 (negligible) |
 
 > Full results: `measurements/pipeline_latency.json`

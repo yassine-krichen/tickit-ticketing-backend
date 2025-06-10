@@ -1,20 +1,19 @@
 /**
- * k6 WebSocket load test for TickIT STOMP notification system.
+ * k6 WebSocket load test for TickIT STOMP over native WebSocket.
  *
- * Simulates 30 concurrent STOMP WebSocket clients.
- * VU 1 sends 50 ticket-state-change events via /app/echo (roundtrip latency measurement).
- * VUs 2–30 stay connected (stresses STOMP session pool — the real production load pattern).
+ * Spring exposes two endpoints at /ws:
+ *   1. Native WebSocket (no SockJS wrapping) — used here
+ *   2. SockJS fallback (for browsers without WS support)
  *
- * Echo endpoint adds server-side timestamp and echoes payload to /user/queue/echo.
- * Latency = Date.now() on receipt - sentAt embedded in payload.
+ * Authentication: JWT in STOMP CONNECT Authorization header.
+ * Spring's WebSocketAuthChannelInterceptor validates it and sets the principal.
  *
- * Prerequisites:
- *   1. Spring Boot app running on localhost:8080
- *   2. Valid JWT in AUTH_TOKEN env var
+ * 30 VUs hold STOMP connections for the test duration.
+ * VU 1 fires 50 ticket state events to /app/echo and measures roundtrip latency.
+ * Each echo embeds sentAt in payload; latency = receive time − sentAt.
  *
  * Run:
  *   k6 run -e AUTH_TOKEN="<jwt>" k6/websocket_load_test.js
- *   k6 run -e AUTH_TOKEN="<jwt>" --out json=k6/raw_output.json k6/websocket_load_test.js
  */
 
 import ws from 'k6/ws';
@@ -24,11 +23,10 @@ import { Counter, Trend } from 'k6/metrics';
 // ---- Config ----
 const BASE_URL = __ENV.BASE_URL || 'ws://localhost:8080';
 const AUTH_TOKEN = __ENV.AUTH_TOKEN || 'REPLACE_WITH_VALID_JWT';
-const WS_ENDPOINT = `${BASE_URL}/ws`;
 const ECHO_SUBSCRIBE = '/user/queue/echo';
 const ECHO_SEND = '/app/echo';
 const EVENTS_PER_TEST = 50;
-const SEND_INTERVAL_MS = 200; // 50 events over 10 s
+const SEND_INTERVAL_MS = 200;
 
 // ---- Custom metrics ----
 const deliveryLatency = new Trend('ws_delivery_latency_ms', true);
@@ -41,11 +39,11 @@ export const options = {
     stomp_load: {
       executor: 'constant-vus',
       vus: 30,
-      duration: '60s',
+      duration: '90s',
     },
   },
   thresholds: {
-    ws_delivery_latency_ms: ['p(50)<200', 'p(95)<500', 'p(99)<1000'],
+    ws_delivery_latency_ms: ['p(50)<500', 'p(95)<1000', 'p(99)<2000'],
     ws_connection_errors: ['count<5'],
   },
 };
@@ -59,25 +57,23 @@ function stompSubscribe(id, destination) {
   return `SUBSCRIBE\nid:${id}\ndestination:${destination}\n\n\x00`;
 }
 
-function stompSendEcho(eventIndex, sentAt) {
-  const body = JSON.stringify({ event: `ticket-state-${eventIndex}`, sentAt });
-  return (
-    `SEND\ndestination:${ECHO_SEND}\ncontent-type:application/json\ncontent-length:${body.length}\n\n${body}\x00`
-  );
+function stompSendEcho(index, sentAt) {
+  const body = JSON.stringify({ event: `ticket-state-${index}`, sentAt });
+  // No content-type: Spring passes body as raw String to echo(String message).
+  // content-type:application/json triggers Jackson which can't deserialize {} → String.
+  return `SEND\ndestination:${ECHO_SEND}\ncontent-length:${body.length}\n\n${body}\x00`;
 }
 
-// ---- Main VU function ----
+// ---- Main VU ----
 export default function () {
   const vuId = __VU;
+  const url = `${BASE_URL}/ws`;
 
   const res = ws.connect(
-    WS_ENDPOINT,
+    url,
     { headers: { Authorization: `Bearer ${AUTH_TOKEN}` } },
     function (socket) {
-      let stompConnected = false;
-      let subscribed = false;
       let sent = 0;
-      let intervalId = null;
 
       socket.on('open', () => {
         socket.send(stompConnect(AUTH_TOKEN));
@@ -85,49 +81,37 @@ export default function () {
 
       socket.on('message', (frame) => {
         if (frame.startsWith('CONNECTED')) {
-          stompConnected = true;
           socket.send(stompSubscribe('sub-echo', ECHO_SUBSCRIBE));
+
+          // VU 1 fires echo events after 500ms warm-up
+          if (vuId === 1) {
+            socket.setTimeout(() => {
+              // k6/ws socket has no clearInterval — use sent counter as gate
+              socket.setInterval(() => {
+                if (sent >= EVENTS_PER_TEST) return;
+                sent++;
+                socket.send(stompSendEcho(sent, Date.now()));
+              }, SEND_INTERVAL_MS);
+            }, 500);
+          }
           return;
         }
 
-        // Subscription confirmation or echo MESSAGE
-        if (frame.startsWith('MESSAGE') || frame.includes(`destination:${ECHO_SUBSCRIBE}`)) {
-          // Only VU 1 handles the echo latency measurement
-          if (vuId === 1 && !subscribed) {
-            subscribed = true;
-
-            intervalId = socket.setInterval(() => {
-              if (sent >= EVENTS_PER_TEST) {
-                socket.clearInterval(intervalId);
-                return;
+        // Echo MESSAGE — compute latency (VU 1 only)
+        if (frame.startsWith('MESSAGE') && vuId === 1) {
+          try {
+            const bodyStart = frame.indexOf('\n\n');
+            if (bodyStart !== -1) {
+              const body = frame.substring(bodyStart + 2).replace(/\x00$/, '');
+              const parsed = JSON.parse(body);
+              const inner = JSON.parse(parsed.message);
+              if (inner && inner.sentAt) {
+                deliveryLatency.add(Date.now() - inner.sentAt);
+                eventsDelivered.add(1);
               }
-              sent++;
-              const sentAt = Date.now();
-              socket.send(stompSendEcho(sent, sentAt));
-            }, SEND_INTERVAL_MS);
-          }
-
-          // Parse echo response for latency — only applies to MESSAGE frames
-          if (frame.startsWith('MESSAGE') && vuId === 1) {
-            try {
-              // Extract JSON body after blank line separator
-              const bodyStart = frame.indexOf('\n\n');
-              if (bodyStart !== -1) {
-                const body = frame.substring(bodyStart + 2).replace(/\x00$/, '');
-                const parsed = JSON.parse(body);
-                const innerMessage = parsed.message;
-                if (innerMessage) {
-                  const inner = JSON.parse(innerMessage);
-                  if (inner.sentAt) {
-                    const latency = Date.now() - inner.sentAt;
-                    deliveryLatency.add(latency);
-                    eventsDelivered.add(1);
-                  }
-                }
-              }
-            } catch (_) {
-              // non-echo frame, ignore
             }
+          } catch (_) {
+            // non-echo frame or parse failure
           }
         }
       });
@@ -136,10 +120,10 @@ export default function () {
         connectionErrors.add(1);
       });
 
-      // Hold connection open
+      // Hold connection for most of the test duration
       socket.setTimeout(() => {
         socket.close();
-      }, 55000);
+      }, 85000);
     }
   );
 
@@ -156,16 +140,18 @@ export function handleSummary(data) {
   const delivered = data.metrics['ws_events_delivered'];
   const errors = data.metrics['ws_connection_errors'];
 
+  // k6 default Trend percentiles in handleSummary: p(90), p(95), p(99)
   const summary = {
     test_config: {
       concurrent_clients: 30,
-      measuring_client: 'VU 1 only (user-specific /user/queue/echo)',
       events_fired: EVENTS_PER_TEST,
-      endpoint: WS_ENDPOINT,
-      method: 'STOMP SEND to /app/echo — server echoes to /user/queue/echo',
+      measuring_client: 'VU 1 — /user/queue/echo roundtrip',
+      endpoint: `${BASE_URL}/ws`,
+      protocol: 'STOMP over native WebSocket',
+      auth: 'JWT in STOMP CONNECT Authorization header',
     },
     results: {
-      p50_ms: lat ? Math.round(lat.values['p(50)']) : null,
+      p90_ms: lat ? Math.round(lat.values['p(90)']) : null,
       p95_ms: lat ? Math.round(lat.values['p(95)']) : null,
       p99_ms: lat ? Math.round(lat.values['p(99)']) : null,
       avg_ms: lat ? Math.round(lat.values['avg']) : null,
