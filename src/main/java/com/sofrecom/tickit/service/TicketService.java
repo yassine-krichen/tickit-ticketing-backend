@@ -13,7 +13,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Service interface for managing Tickets.
+ * Service interface for managing {@link Ticket} entities.
  */
 public interface TicketService {
 
@@ -88,4 +88,13 @@ public interface TicketService {
      *         - resolved: Change in RESOLVED tickets
      */
     Map<String, Double> getMonthOverMonthComparisons();
+
+    /**
+     * Automatically deletes tickets that are in 'CLOSED' status and whose 'updatedAt'
+     * timestamp is older than 90 days. This method is designed to be invoked by
+     * a scheduled task.
+     *
+     * @return The number of tickets that were deleted.
+     */
+    int autoDeleteOldClosedTickets();
 }
