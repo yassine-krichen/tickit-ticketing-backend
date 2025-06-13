@@ -5,13 +5,17 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.PagingAndSortingRepository;
+import org.springframework.data.repository.query.Param;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
@@ -62,4 +66,15 @@ public interface TicketRepository extends PagingAndSortingRepository<Ticket, UUI
        nativeQuery = true)
 Object[] getResolutionMetrics(@Param("status") String status);
    
+/**
+     * Deletes tickets that have the specified status and were last updated before the given timestamp.
+     * This is a bulk operation and will not trigger JPA lifecycle callbacks on individual entities.
+     *
+     * @param status The status of the tickets to delete (e.g., CLOSED).
+     * @param ninetyDaysAgo The timestamp threshold; tickets updated before this time will be considered for deletion.
+     * @return The number of tickets deleted.
+     */
+    @Modifying
+    @Query("DELETE FROM Ticket t WHERE t.status = :status AND t.updatedAt < :ninetyDaysAgo")
+    int deleteTicketsByStatusAndUpdatedAtBefore(@Param("status") Ticket.Status status, @Param("ninetyDaysAgo") LocalDateTime ninetyDaysAgo);
 }

@@ -1167,4 +1167,24 @@ public class TicketServiceImpl implements TicketService {
         return result;
     }
 
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @Transactional
+    public int autoDeleteOldClosedTickets() {
+        log.info("Starting automatic deletion process for old, closed tickets.");
+        LocalDateTime ninetyDaysAgo = LocalDateTime.now().minusDays(90);
+        log.debug("Deletion threshold: Tickets updated before {}.", ninetyDaysAgo);
+
+        int deletedCount = ticketRepository.deleteTicketsByStatusAndUpdatedAtBefore(Ticket.Status.CLOSED, ninetyDaysAgo);
+
+        if (deletedCount > 0) {
+            log.info("Successfully deleted {} old, closed tickets.", deletedCount);
+        } else {
+            log.info("No old, closed tickets found matching the deletion criteria.");
+        }
+        return deletedCount;
+    }
 }
