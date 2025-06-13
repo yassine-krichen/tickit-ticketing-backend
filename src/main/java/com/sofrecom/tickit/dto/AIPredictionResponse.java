@@ -18,4 +18,7 @@ public class AIPredictionResponse {
     
     @Schema(description = "Explanation for the prediction")
     private String explanation;
+
+    @Schema(description = "Confidence score of the prediction (0-1)")
+    private double confidenceScore;
 }

@@ -7,9 +7,11 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
 import com.sofrecom.tickit.model.LedgerEntry;
 
+@Repository
 public interface LedgerRepository extends JpaRepository<LedgerEntry, UUID> {
     Optional<LedgerEntry> findTopByOrderByTimestampDesc();
 
@@ -40,4 +42,17 @@ public interface LedgerRepository extends JpaRepository<LedgerEntry, UUID> {
     @Query(value = "SELECT * FROM ledger_entry " +
                "WHERE position(lower(?1) in lower(cast(data_snapshot as text))) > 0", nativeQuery = true)
     List<LedgerEntry> findByJsonFieldContains(String searchText);
+
+    @Query(value = "SELECT * FROM ledger_entry " +
+           "WHERE entity_type = 'TREATMENT_ACT' " +
+           "AND data_snapshot ->> 'type_element' = :type " +
+           "AND data_snapshot ->> 'priorite' = :priority " +
+           "ORDER BY timestamp DESC " +
+           "LIMIT :limit", 
+           nativeQuery = true)
+    List<LedgerEntry> findSimilarTreatmentActs(
+        @Param("type") String type,
+        @Param("priority") String priority,
+        @Param("limit") int limit
+    );
 }

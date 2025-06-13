@@ -1,6 +1,7 @@
 package com.sofrecom.tickit.impl;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -14,12 +15,16 @@ import com.sofrecom.tickit.repository.LedgerRepository;
 import com.sofrecom.tickit.service.LedgerService;
 import com.sofrecom.tickit.util.CryptoUtil;
 
+import lombok.extern.slf4j.Slf4j;
+
 
 @Service
+@Slf4j
 public class LedgerServiceImpl implements LedgerService {
     
     private final LedgerRepository ledgerRepository;
     private final CryptoUtil cryptoUtil;
+    
     
     public LedgerServiceImpl(LedgerRepository ledgerRepository, CryptoUtil cryptoUtil) {
         this.ledgerRepository = ledgerRepository;
@@ -124,6 +129,20 @@ public class LedgerServiceImpl implements LedgerService {
     @Override
     public List<LedgerEntry> getLedgerEntriesByJsonFieldContains(String jsonValue) {
         return ledgerRepository.findByJsonFieldContains(jsonValue);
+    }
+
+    @Override
+    public List<LedgerEntry> findSimilarTreatmentActs(String type, String priority, int limit) {
+        log.debug("Finding similar treatment acts from ledger - type: {}, priority: {}", type, priority);
+        
+        try {
+            List<LedgerEntry> similarActs = ledgerRepository.findSimilarTreatmentActs(type, priority, limit);
+            log.debug("Found {} similar treatment acts", similarActs.size());
+            return similarActs;
+        } catch (Exception e) {
+            log.error("Error finding similar treatment acts from ledger", e);
+            return new ArrayList<>();
+        }
     }
     
 }

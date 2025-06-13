@@ -1,8 +1,6 @@
 package com.sofrecom.tickit.repository;
 
 import com.sofrecom.tickit.model.Acte_traitement;
-import com.sofrecom.tickit.model.Case;
-
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -18,7 +16,7 @@ import java.util.UUID;
  */
 @Repository
 public interface ActeTraitementRepository extends JpaRepository<Acte_traitement, String> {
-    
+   
     /**
      * Find all treatment acts associated with a specific case.
      *
@@ -27,7 +25,7 @@ public interface ActeTraitementRepository extends JpaRepository<Acte_traitement,
      */
     @Query("SELECT a FROM Acte_traitement a WHERE a.associatedCase.id = :caseId AND a.isDeleted = false")
     List<Acte_traitement> findByCaseId(@Param("caseId") UUID caseId);
-    
+   
     /**
      * Find all active (non-deleted) treatment acts.
      *
@@ -35,7 +33,7 @@ public interface ActeTraitementRepository extends JpaRepository<Acte_traitement,
      */
     @Query("SELECT a FROM Acte_traitement a WHERE a.isDeleted = false")
     List<Acte_traitement> findAllActive();
-    
+   
     /**
      * Find an active treatment act by its ID.
      *
@@ -44,7 +42,7 @@ public interface ActeTraitementRepository extends JpaRepository<Acte_traitement,
      */
     @Query("SELECT a FROM Acte_traitement a WHERE a.idacte = :id AND a.isDeleted = false")
     Optional<Acte_traitement> findActiveById(@Param("id") String id);
-    
+   
     /**
      * Find treatment acts by "prestation" type.
      *

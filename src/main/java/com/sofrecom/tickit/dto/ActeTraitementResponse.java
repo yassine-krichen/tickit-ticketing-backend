@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.util.Date;
@@ -17,6 +18,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Getter
 public class ActeTraitementResponse {
     
     private String idacte;
@@ -61,4 +63,6 @@ public class ActeTraitementResponse {
     private UUID caseId;
     private String caseName;
     private boolean isDeleted;
+
+    private String status;
 }

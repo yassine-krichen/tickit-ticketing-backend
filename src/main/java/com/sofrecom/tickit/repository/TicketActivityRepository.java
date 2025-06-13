@@ -82,4 +82,7 @@ public interface TicketActivityRepository extends
      */
     @Query("SELECT a FROM TicketActivity a WHERE a.endTime IS NULL AND a.startTime < :cutoffDate AND a.deleted = false")
     List<TicketActivity> findStalledActivities(@Param("cutoffDate") LocalDateTime cutoffDate);
+
+    
+
 }

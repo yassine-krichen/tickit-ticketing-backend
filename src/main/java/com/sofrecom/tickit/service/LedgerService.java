@@ -27,4 +27,13 @@ public interface LedgerService {
 
     // Query for JSON field containing certain value
     List<LedgerEntry> getLedgerEntriesByJsonFieldContains(String jsonValue);
+
+    /**
+     * Find similar treatment acts from ledger based on type and priority
+     * @param type The type of treatment act
+     * @param priority The priority level
+     * @param limit Maximum number of entries to return
+     * @return List of ledger entries for similar treatment acts
+     */
+    List<LedgerEntry> findSimilarTreatmentActs(String type, String priority, int limit);
 }

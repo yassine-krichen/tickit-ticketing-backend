@@ -81,4 +81,6 @@ public interface ActeTraitementService {
      * @return A populated treatment act response with detailed case and prestation information
      */
     PopulatedTreatmentActResponse getPopulatedActeTraitementById(String id);
+
+    
 }

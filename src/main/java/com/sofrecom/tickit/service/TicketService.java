@@ -88,4 +88,10 @@ public interface TicketService {
      *         - resolved: Change in RESOLVED tickets
      */
     Map<String, Double> getMonthOverMonthComparisons();
+
+    public List<Ticket> findSimilarResolvedTickets(String subject, String type, int limit);
+
+    public Map<String, Object> getTicketTrends(int days);
+
+    public Map<String, Double> getResolutionMetrics();
 }

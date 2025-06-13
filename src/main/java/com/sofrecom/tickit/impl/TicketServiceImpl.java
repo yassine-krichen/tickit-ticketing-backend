@@ -1108,4 +1108,63 @@ public class TicketServiceImpl implements TicketService {
         // Round to 1 decimal place
         return Math.round(percentage * 10.0) / 10.0;
     }
+
+    @Override
+    public List<Ticket> findSimilarResolvedTickets(String subject, String type, int limit) {
+        // Extract keywords from subject (simple approach)
+        String[] keywords = subject.split("\\s+");
+        String primaryKeyword = keywords.length > 0 ? keywords[0] : subject;
+        
+        // Use the updated repository method with proper Status enum and Pageable
+        Page<Ticket> ticketPage = ticketRepository.findSimilarResolvedTickets(
+            primaryKeyword, 
+            Ticket.Status.RESOLVED, 
+            type, 
+            PageRequest.of(0, limit)
+        );
+        
+        return ticketPage.getContent();
+    }
+    
+    
+    
+
+    @Override
+    public Map<String, Object> getTicketTrends(int days) {
+        LocalDateTime startDate = LocalDateTime.now().minusDays(days);
+        List<Object[]> trendData = ticketRepository.getTicketTrends(startDate);
+        
+        Map<String, Object> trends = new HashMap<>();
+        
+        // Calculate total tickets from the trend data
+        long totalTickets = trendData.stream()
+            .mapToLong(row -> (Long) row[1])
+            .sum();
+        
+        trends.put("totalTickets", totalTickets);
+        trends.put("dailyData", trendData);
+        
+        return trends;
+    }
+    
+    @Override
+    public Map<String, Double> getResolutionMetrics() {
+        Object[] metrics = ticketRepository.getResolutionMetrics(Ticket.Status.RESOLVED.name());
+        
+        Map<String, Double> result = new HashMap<>();
+        
+        if (metrics != null && metrics.length >= 3) {
+            result.put("averageResolutionHours", (Double) metrics[0]);
+            result.put("fastestResolutionHours", (Double) metrics[1]);
+            result.put("slowestResolutionHours", (Double) metrics[2]);
+        } else {
+            // Return default values if no metrics found
+            result.put("averageResolutionHours", 0.0);
+            result.put("fastestResolutionHours", 0.0);
+            result.put("slowestResolutionHours", 0.0);
+        }
+        
+        return result;
+    }
+
 }
