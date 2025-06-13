@@ -17,6 +17,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -256,30 +258,62 @@ public class LedgerController {
 
     // Add this endpoint to LedgerController class
     @Operation(summary = "Test endpoint for external system integration", 
-          description = "Logs incoming payloads and returns a mock response")
+          description = "Logs incoming payloads, generates user fingerprint, persists the ledger entry, and returns a response.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Payload received and logged"),
-        @ApiResponse(responseCode = "400", description = "Invalid payload format")
+        @ApiResponse(responseCode = "200", description = "Payload processed and ledger entry created successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid payload format or processing error"),
+        @ApiResponse(responseCode = "401", description = "User not authenticated (if security is strictly enforced and fingerprint generation fails)")
     })
     @PostMapping("/test-integration")
     public ResponseEntity<LedgerEntryResponse> testIntegration(
-            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestHeader(value = "Authorization", required = false) String authHeader, // Logged but fingerprint comes from context
             @Valid @RequestBody LedgerEntryRequest request) {
         
         LOGGER.info("=== Test Integration Endpoint Called ===");
-        LOGGER.info("Auth Header: {}", authHeader);
-        LOGGER.info("Request Payload: {}", request);
+        LOGGER.info("Authorization Header (for logging purposes): {}", authHeader);
+        LOGGER.info("Incoming Request Payload: {}", request);
         
-        // Create mock response
-        LedgerEntryResponse response = LedgerEntryResponse.builder()
-            .id(UUID.randomUUID())
-            .entityType(request.getEntityType())
-            .entityId(request.getEntityId())
-            .timestamp(LocalDateTime.now())
-            .status("TEST_SUCCESS")
-            .message("Payload received and logged successfully")
-            .build();
+        LedgerEntryResponse response;
+        try {
+            // 1. Generate user fingerprint from authenticated user context
+            String userFingerprint = authUtils.generateUserFingerprint();
+            request.setUserFingerprint(userFingerprint); // Override any incoming fingerprint
+            LOGGER.info("Generated User Fingerprint: {}", userFingerprint);
 
-        return ResponseEntity.ok(response);
+            // 2. Convert DTO to entity
+            LedgerEntry entryToSave = ledgerEntryMapper.toEntity(request);
+            LOGGER.info("Mapped LedgerEntry entity for saving: {}", entryToSave);
+
+            // 3. Persist the entry using the LedgerService
+            // This service call will handle setting the timestamp, hashes, and digital signature.
+            ledgerService.saveLedgerEntry(entryToSave);
+            LOGGER.info("LedgerEntry from integration endpoint saved successfully with ID: {}", entryToSave.getId());
+
+            // 4. Prepare response from the *saved* entity
+            response = ledgerEntryMapper.toResponse(entryToSave);
+            // Assuming LedgerEntryResponse is mutable or has a builder to add status/message
+            // If LedgerEntryResponse is immutable and doesn't have these fields, 
+            // you might need a wrapper DTO or adjust LedgerEntryResponse.
+            // For now, I'll assume it's mutable like in the original createLedgerEntry.
+            response.setStatus("INTEGRATION_SUCCESS"); 
+            response.setMessage("Ledger entry from integration endpoint created, logged, and persisted successfully.");
+            LOGGER.info("Returning successful response: {}", response);
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            LOGGER.error("Error processing /test-integration request: {}", e.getMessage(), e);
+            // Build an error response
+            response = LedgerEntryResponse.builder()
+                .id(null) // No ID if saving failed
+                .entityType(request.getEntityType())
+                .entityId(request.getEntityId())
+                .timestamp(LocalDateTime.now())
+                .status("INTEGRATION_ERROR")
+                .message("Failed to process integration payload: " + e.getMessage())
+                .build();
+            // Consider returning a more specific HTTP status code based on the exception type
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
     }
 }
