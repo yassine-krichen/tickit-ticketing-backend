@@ -211,43 +211,84 @@ public class AIController {
         return Math.min(score, 1.0);
     }
 
-    private String buildAnalysisPrompt(List<TicketCount> statusCounts, 
+    private String buildAnalysisPrompt(List<TicketCount> statusCounts,
                                      List<TicketCount> typeCounts,
                                      Map<String, Object> trendData,
                                      Map<String, Double> resolutionMetrics) {
-        StringBuilder prompt = new StringBuilder();
-        prompt.append("Analyze the ticketing system with the following comprehensive data:\n\n");
-
-        // Current Status
-        prompt.append("CURRENT STATUS:\n");
-        statusCounts.forEach(count -> 
-            prompt.append("- ").append(count.getCategory()).append(": ")
-                  .append(count.getCount()).append("\n"));
-
-        // Types Distribution
-        prompt.append("\nTYPE DISTRIBUTION:\n");
-        typeCounts.forEach(count -> 
-            prompt.append("- ").append(count.getCategory()).append(": ")
-                  .append(count.getCount()).append("\n"));
-
-        // Trends
-        prompt.append("\nTREND ANALYSIS (30-day comparison):\n");
-        trendData.forEach((key, value) -> 
-            prompt.append("- ").append(key).append(": ").append(value).append("\n"));
-
-        // Performance Metrics
-        prompt.append("\nPERFORMANCE METRICS:\n");
-        resolutionMetrics.forEach((metric, value) -> 
-            prompt.append("- ").append(metric).append(": ").append(value).append("\n"));
-
-        prompt.append("\nProvide structured analysis including:\n");
-        prompt.append("1. Performance Assessment (Good/Concerning/Critical)\n");
-        prompt.append("2. Key Insights and Patterns\n");
-        prompt.append("3. Priority Action Items\n");
-        prompt.append("4. Predictive Insights\n");
-
-        return aiService.queryWithContext(prompt.toString(), "");
-    }
+    StringBuilder prompt = new StringBuilder();
+    
+    prompt.append("BLOCKED TREATMENT ACT TICKETING SYSTEM ANALYSIS\n");
+    prompt.append("==============================================\n\n");
+    
+    prompt.append("CONTEXT: This ticketing system manages blocked treatment act cases. ");
+    prompt.append("Analyze the following data to identify workflow inefficiencies, ");
+    prompt.append("prioritize treatment act types, and recommend system improvements.\n\n");
+    
+    // Current Status Distribution
+    prompt.append("CURRENT TICKET STATUS DISTRIBUTION:\n");
+    statusCounts.forEach(count ->
+        prompt.append("- ").append(count.getCategory()).append(": ")
+              .append(count.getCount()).append(" tickets\n"));
+    
+    // Treatment Act Types Analysis
+    prompt.append("\nTREATMENT ACT TYPE BREAKDOWN:\n");
+    typeCounts.forEach(count ->
+        prompt.append("- ").append(count.getCategory()).append(": ")
+              .append(count.getCount()).append(" cases\n"));
+    
+    // Trend Analysis
+    prompt.append("\nTREND ANALYSIS (30-day comparison):\n");
+    trendData.forEach((key, value) ->
+        prompt.append("- ").append(key).append(": ").append(value).append("\n"));
+    
+    // Performance & Resolution Metrics
+    prompt.append("\nWORKFLOW PERFORMANCE METRICS:\n");
+    resolutionMetrics.forEach((metric, value) ->
+        prompt.append("- ").append(metric).append(": ").append(String.format("%.2f", value)).append("\n"));
+    
+    // Enhanced Analysis Requirements
+    prompt.append("\nPROVIDE COMPREHENSIVE ANALYSIS INCLUDING:\n\n");
+    
+    prompt.append("1. WORKFLOW EFFICIENCY ASSESSMENT:\n");
+    prompt.append("   - Identify bottlenecks in treatment act processing\n");
+    prompt.append("   - Analyze status transition patterns\n");
+    prompt.append("   - Highlight workflow stages with longest delays\n");
+    prompt.append("   - Rate overall efficiency: Optimal/Good/Concerning/Critical\n\n");
+    
+    prompt.append("2. TREATMENT ACT PRIORITIZATION:\n");
+    prompt.append("   - Rank treatment act types by volume and complexity\n");
+    prompt.append("   - Identify which types cause most workflow delays\n");
+    prompt.append("   - Recommend focus areas for resource allocation\n");
+    prompt.append("   - Suggest treatment act types for process automation\n\n");
+    
+    prompt.append("3. TREND ANALYSIS & INSIGHTS:\n");
+    prompt.append("   - Identify emerging patterns in blocked cases\n");
+    prompt.append("   - Analyze seasonal or cyclical trends\n");
+    prompt.append("   - Detect early warning signals for system overload\n");
+    prompt.append("   - Compare current performance vs historical baselines\n\n");
+    
+    prompt.append("4. ACTIONABLE IMPROVEMENT RECOMMENDATIONS:\n");
+    prompt.append("   - Immediate actions (next 7 days)\n");
+    prompt.append("   - Short-term improvements (next 30 days)\n");
+    prompt.append("   - Long-term strategic changes (next 90 days)\n");
+    prompt.append("   - Resource reallocation suggestions\n\n");
+    
+    prompt.append("5. PREDICTIVE INSIGHTS:\n");
+    prompt.append("   - Forecast potential system stress points\n");
+    prompt.append("   - Predict resource needs based on trends\n");
+    prompt.append("   - Identify treatment act types likely to increase\n");
+    prompt.append("   - Estimate impact of proposed improvements\n\n");
+    
+    prompt.append("6. QUALITY METRICS:\n");
+    prompt.append("   - Assess case resolution quality indicators\n");
+    prompt.append("   - Identify patterns in case reopening or escalation\n");
+    prompt.append("   - Recommend quality assurance checkpoints\n\n");
+    
+    prompt.append("Format your response with clear sections, specific metrics, and actionable recommendations. ");
+    prompt.append("Focus on practical improvements that can enhance treatment act processing efficiency.");
+    
+    return aiService.queryWithContext(prompt.toString(), "treatment_act_ticketing_analysis");
+}
 
     private String buildPredictionPrompt(ActeTraitementResponse act,
                                    List<LedgerEntry> caseEntries,
