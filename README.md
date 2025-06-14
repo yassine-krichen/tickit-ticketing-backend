@@ -61,22 +61,11 @@ Real-time WebSocket notifications keep teams synchronized; semantic search over 
 
 ### Architecture
 
-```mermaid
-graph TD
-    A[REST Client / Frontend] -->|JWT Auth| B[Spring Boot API]
-    A -->|STOMP over WS| C[WebSocket Handler]
-    B --> D[TicketService]
-    B --> E[AIService]
-    B --> F[CaseService]
-    C --> G[WebSocketEventListener]
-    D --> H[(PostgreSQL)]
-    E --> I[Ollama LLM]
-    E --> J[ChromaDB RAG]
-    F --> H
-    G --> H
-    J -->|Sentence-Transformers| K[Vector Store]
-    H --> L[Audit Trail]
-```
+![System Architecture](assets/class-diagram.png)
+*TickIT system architecture and component relationships.*
+
+![Use Cases](assets/use-case-diagram.png)
+*Core user workflows and system interactions.*
 
 ### Key Decisions
 
