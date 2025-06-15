@@ -15,10 +15,10 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.client.RestTemplate;
 
+import com.sofrecom.tickit.impl.UserDetailsServiceImpl;
 import com.sofrecom.tickit.security.CustomAccessDeniedHandler;
 import com.sofrecom.tickit.security.jwt.AuthEntryPointJwt;
 import com.sofrecom.tickit.security.jwt.AuthTokenFilter;
-import com.sofrecom.tickit.impl.UserDetailsServiceImpl;
 
 /**
  * Configuration class for Spring Security.
@@ -115,6 +115,7 @@ public class WebSecurityConfig {
 				.antMatchers("/swagger-resources/**").permitAll()
 				.antMatchers("/swagger-ui.html").permitAll()
 				.antMatchers("/webjars/**").permitAll()
+				.antMatchers("actuator/**").permitAll()
 				.anyRequest().authenticated();
 
 		http.authenticationProvider(authenticationProvider());
