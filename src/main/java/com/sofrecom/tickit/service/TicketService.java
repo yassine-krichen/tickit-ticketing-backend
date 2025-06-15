@@ -89,7 +89,7 @@ public interface TicketService {
      */
     Map<String, Double> getMonthOverMonthComparisons();
 
-    public List<Ticket> findSimilarResolvedTickets(String subject, String type, int limit);
+    public List<Ticket> findSimilarResolvedTickets(String subject, CaseType type, int limit);
 
     public Map<String, Object> getTicketTrends(int days);
 

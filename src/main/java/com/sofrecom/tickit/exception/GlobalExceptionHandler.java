@@ -24,12 +24,17 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.time.LocalDateTime;
+import org.springframework.http.MediaType;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Global exception handler for the application.
  * Catches specific exceptions and formats them into a standard ErrorResponse.
  */
 @ControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     /**
@@ -168,17 +173,25 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(
-            Exception ex, HttpServletRequest request) {
-
-        ErrorResponse errorResponse = new ErrorResponse(
-                HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
-                "An unexpected error occurred. Please try again later.",
-                request.getRequestURI()
-        );
-        return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+            Exception ex, 
+            HttpServletRequest request) {
+        
+        log.error("Unhandled exception occurred", ex);
+        
+        ErrorResponse errorResponse = ErrorResponse.builder()
+            .timestamp(LocalDateTime.now())
+            .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+            .error("Internal Server Error")
+            .message(ex.getMessage())
+            .path(Optional.ofNullable(request.getRequestURI()).orElse("unknown"))
+            .build();
+            
+        return ResponseEntity
+            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(errorResponse);
     }
-
+    
     /**
      * Handles validation errors for method arguments.
      *
@@ -210,11 +223,22 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
      * @return ResponseEntity containing the formatted error response.
      */
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ErrorDetails> handleResourceNotFoundException(ResourceNotFoundException ex,
-            WebRequest webRequest) {
-        ErrorDetails errorDetails = new ErrorDetails(new Date(), ex.getMessage(), webRequest.getDescription(false));
-
-        return new ResponseEntity<>(errorDetails, HttpStatus.NOT_FOUND);
+    public ResponseEntity<ErrorResponse> handleResourceNotFoundException(
+            ResourceNotFoundException ex,
+            HttpServletRequest request) {
+            
+        ErrorResponse errorResponse = ErrorResponse.builder()
+            .timestamp(LocalDateTime.now())
+            .status(HttpStatus.NOT_FOUND.value())
+            .error("Not Found")
+            .message(ex.getMessage())
+            .path(Optional.ofNullable(request.getRequestURI()).orElse("unknown"))
+            .build();
+            
+        return ResponseEntity
+            .status(HttpStatus.NOT_FOUND)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(errorResponse);
     }
 
     /**

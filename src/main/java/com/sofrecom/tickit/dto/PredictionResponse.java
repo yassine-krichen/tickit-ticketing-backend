@@ -2,7 +2,6 @@ package com.sofrecom.tickit.dto;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -14,7 +13,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PredictionResponse {
-    private UUID treatmentActId;
+    private String treatmentActId;
     private String prediction;
     private double historicalBlockRate;
     private List<String> riskFactors;

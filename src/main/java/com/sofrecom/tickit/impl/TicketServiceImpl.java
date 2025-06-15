@@ -1110,7 +1110,7 @@ public class TicketServiceImpl implements TicketService {
     }
 
     @Override
-    public List<Ticket> findSimilarResolvedTickets(String subject, String type, int limit) {
+    public List<Ticket> findSimilarResolvedTickets(String subject, CaseType type, int limit) {
         // Extract keywords from subject (simple approach)
         String[] keywords = subject.split("\\s+");
         String primaryKeyword = keywords.length > 0 ? keywords[0] : subject;
@@ -1138,7 +1138,17 @@ public class TicketServiceImpl implements TicketService {
         
         // Calculate total tickets from the trend data
         long totalTickets = trendData.stream()
-            .mapToLong(row -> (Long) row[1])
+            .mapToLong(row -> {
+                Object count = row[1];
+                if (count instanceof java.math.BigInteger) {
+                    return ((java.math.BigInteger) count).longValue();
+                } else if (count instanceof Long) {
+                    return (Long) count;
+                } else if (count instanceof Integer) {
+                    return ((Integer) count).longValue();
+                }
+                throw new IllegalArgumentException("Unexpected count type: " + count.getClass());
+            })
             .sum();
         
         trends.put("totalTickets", totalTickets);
@@ -1187,4 +1197,6 @@ public class TicketServiceImpl implements TicketService {
         }
         return deletedCount;
     }
+
+    
 }

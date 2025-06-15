@@ -1,6 +1,5 @@
 package com.sofrecom.tickit.scheduler;
 
-import com.sofrecom.tickit.config.AutomationProperties;
 import com.sofrecom.tickit.service.AutomationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,7 +13,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 @Slf4j
 public class AutomationScheduler {
     private final AutomationService automationService;
-    private final AutomationProperties properties;
     
     /**
      * Scheduled task to process overdue cases.

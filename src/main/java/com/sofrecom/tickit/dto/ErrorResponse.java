@@ -3,6 +3,8 @@ package com.sofrecom.tickit.dto;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.Builder;
+
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -14,6 +16,7 @@ import java.util.Map;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class ErrorResponse {
     private LocalDateTime timestamp;
     private int status;
