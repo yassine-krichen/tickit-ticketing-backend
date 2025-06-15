@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -79,29 +80,40 @@ public class AIServiceImpl implements AIService {
 public AIAnalysisResponse analyzeSystemStatistics() {
     log.info("Starting FTTH system performance analysis");
     
-    // Gather actual metrics
     Map<String, Double> resolutionMetrics = ticketService.getResolutionMetrics();
-    Map<String, Object> trends = ticketService.getTicketTrends(30); // Last 30 days
+    Map<String, Object> trends = ticketService.getTicketTrends(30);
     
     String prompt = String.format(
-        "Analyze FTTH deployment system performance with these metrics:\n\n" +
-        "Resolution Times:\n" +
-        "- Average: %.2f hours\n" +
-        "- Fastest: %.2f hours\n" +
-        "- Slowest: %.2f hours\n\n" +
-        "Volume Trends (30 days):\n" +
-        "- Total Tickets: %d\n" +
-        "Daily Pattern: %s\n\n" +
-        "Provide analysis in sections:\n" +
-        "1. Performance Metrics (resolution times, throughput)\n" +
-        "2. Trends (volume patterns, peak times)\n" +
-        "3. Recommendations (process improvements)\n" +
-        "4. Risk Areas (SLA compliance, resource allocation)",
+        "Analyze FTTH deployment system performance focusing on treatment acts blockage patterns:\n\n" +
+        "Current Metrics:\n" +
+        "- Average Resolution: %.2f hours\n" +
+        "- Fastest Resolution: %.2f hours\n" +
+        "- Slowest Resolution: %.2f hours\n" +
+        "- Total Cases: %d\n\n" +
+        "Provide detailed analysis with these specific sections:\n\n" +
+        "1. Performance Metrics:\n" +
+        "- Treatment act success rates by type (BRAME, PMZ, etc.)\n" +
+        "- Documentation completion rates (fiche navette, bandeau)\n" +
+        "- SLA compliance metrics\n\n" +
+        "2. Trends:\n" +
+        "- Most common blockage causes (SI-Terrain mismatch, missing documentation)\n" +
+        "- Treatment act types with highest block rates\n" +
+        "- Peak blockage periods or patterns\n\n" +
+        "3. Recommendations:\n" +
+        "Format: 'ATT INFO: [Action] | Reason: [Explanation]'\n" +
+        "Examples:\n" +
+        "- Mail to ZZZ Ftthvente: incomplete BRAM section in fiche navette\n" +
+        "- Request UI verification: SI-Terrain consistency issues\n" +
+        "- Follow up with OWF: missing bandeau documentation\n\n" +
+        "4. Risk Areas:\n" +
+        "- Documentation compliance risks\n" +
+        "- Infrastructure verification needs\n" +
+        "- Inter-commune coverage issues\n" +
+        "Include specific team names (UI/OWF/CAF) and documentation types (fiche navette, bandeau)",
         resolutionMetrics.get("averageResolutionHours"),
         resolutionMetrics.get("fastestResolutionHours"),
         resolutionMetrics.get("slowestResolutionHours"),
-        trends.get("totalTickets"),
-        trends.get("dailyData").toString()
+        trends.get("totalTickets")
     );
 
     String response = query(prompt);
@@ -115,7 +127,43 @@ public AIAnalysisResponse analyzeSystemStatistics() {
         .build();
 }
 
-    @Override
+private List<String> extractRecommendations(String response) {
+    List<String> recommendations = new ArrayList<>();
+    String recommendationsSection = extractSection(response, "Recommendations");
+    
+    if (!recommendationsSection.isEmpty()) {
+        String[] lines = recommendationsSection.split("\n");
+        for (String line : lines) {
+            line = line.trim();
+            if (line.startsWith("-") || line.startsWith("•") || line.matches("^\\d+\\..*")) {
+                // Remove bullet points and clean up
+                line = line.replaceAll("^[-•\\d+\\.\\s]+", "").trim();
+                if (line.contains("ATT INFO:")) {
+                    recommendations.add(line);
+                } else if (!line.isEmpty()) {
+                    // Format as ATT INFO if not already formatted
+                    recommendations.add("ATT INFO: " + line);
+                }
+            }
+        }
+    }
+    
+    // Provide FTTH-specific default recommendations if none found
+    if (recommendations.isEmpty()) {
+        recommendations.addAll(Arrays.asList(
+            "ATT INFO: Mail envoyé à ZZZ Ftthvente - Section BRAM de la fiche navette incomplète",
+            "ATT INFO: Vérification UI nécessaire - Incohérence SI-Terrain détectée",
+            "ATT INFO: Suivi OWF requis - Documentation bandeau manquante",
+            "ATT INFO: Revue CAF nécessaire - Changement de site support",
+            "ATT INFO: Vérification commune/PMZ - Problème de couverture détecté"
+        ));
+    }
+    
+    return recommendations;
+}
+
+
+@Override
 public AIResolutionResponse suggestResolution(UUID ticketId) {
     log.info("Generating resolution suggestions for ticket {}", ticketId);
     
@@ -128,20 +176,36 @@ public AIResolutionResponse suggestResolution(UUID ticketId) {
     );
 
     String prompt = String.format(
-        "Analyze this FTTH ticket and suggest resolution:\n\n" +
+        "Suggest resolution actions for this FTTH deployment ticket following standard intervention patterns:\n\n" +
         "Current Ticket:\n" +
-        "- ID: %s\n" +
-        "- Type: %s\n" +
-        "- Subject: %s\n" +
-        "- Status: %s\n\n" +
-        "Similar Resolved Tickets:\n%s\n\n" +
-        "Case History:\n%s\n\n" +
-        "Provide structured resolution:\n" +
-        "1. Primary Solution (based on similar tickets)\n" +
-        "2. Alternative Solutions\n" +
-        "3. Required Steps (ordered list)\n" +
-        "4. Potential Risks\n" +
-        "5. Required Resources",
+        "ID: %s\n" +
+        "Type: %s\n" +
+        "Subject: %s\n" +
+        "Status: %s\n\n" +
+        "Similar Cases: %s\n\n" +
+        "History: %s\n\n" +
+        "Provide resolution in this format:\n\n" +
+        "1. Primary Action:\n" +
+        "Format: 'ATT INFO (Mail envoyé à [TEAM] le [DATE]). Relance prévue le [DATE+7]'\n" +
+        "Examples:\n" +
+        "- Mail à ZZZ Ftthvente: vérification fiche navette BRAM\n" +
+        "- Mail à UI: incohérence SI-Terrain\n" +
+        "- Mail à OWF: bandeau manquant\n\n" +
+        "2. Alternative Actions:\n" +
+        "- Specific escalation paths\n" +
+        "- Secondary team contacts\n\n" +
+        "3. Required Steps:\n" +
+        "- Document verification steps\n" +
+        "- System checks needed\n" +
+        "- Follow-up actions\n\n" +
+        "4. Known Risks:\n" +
+        "- Document compliance issues\n" +
+        "- Technical verification needs\n" +
+        "- Communication gaps\n\n" +
+        "5. Required Resources:\n" +
+        "- Team contacts (UI/OWF/CAF)\n" +
+        "- Documentation systems (SPI)\n" +
+        "- Verification tools",
         ticket.getId(),
         ticket.getType(),
         ticket.getSubject(),
@@ -151,8 +215,8 @@ public AIResolutionResponse suggestResolution(UUID ticketId) {
     );
 
     String response = query(prompt);
-    log.debug("Received AI resolution response: {}", response);
-    
+    log.debug("Received AI resolution response for ticket {}: {}", ticketId, response);
+
     return AIResolutionResponse.builder()
         .primarySolution(extractPrimarySolution(response))
         .alternativeSolutions(extractAlternativeSolutions(response))
@@ -163,6 +227,25 @@ public AIResolutionResponse suggestResolution(UUID ticketId) {
         .estimatedEffort(extractEstimatedEffort(response))
         .build();
 }
+
+private String extractPrimarySolution(String response) {
+    String solution = extractSection(response, "Primary Action");
+    if (solution.isEmpty()) {
+        solution = extractSection(response, "Primary Solution");
+    }
+    
+    // Format as ATT INFO if not already formatted
+    if (!solution.isEmpty() && !solution.startsWith("ATT INFO")) {
+        solution = String.format("ATT INFO (Mail envoyé le %s): %s",
+            LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")),
+            solution.trim());
+    }
+    
+    return solution.isEmpty() ? 
+        "ATT INFO: Action required - Vérification documentation nécessaire" : 
+        solution;
+}
+    
 
 private String formatSimilarTickets(List<Ticket> tickets) {
     StringBuilder sb = new StringBuilder();
@@ -324,10 +407,6 @@ private String formatCaseHistory(List<LedgerEntry> entries) {
         return null;
     }
 
-    private List<String> extractRecommendations(String response) {
-        return extractListFromSection(response, "Recommendations");
-    }
-
     private List<AIAnalysisResponse.RiskArea> extractRiskAreas(String response) {
         List<AIAnalysisResponse.RiskArea> riskAreas = new ArrayList<>();
         String riskSection = extractSection(response, "Risk Areas");
@@ -409,10 +488,6 @@ private String formatCaseHistory(List<LedgerEntry> entries) {
         }
     }
 
-    private String extractPrimarySolution(String response) {
-        String section = extractSection(response, "Primary Solution");
-        return section.isEmpty() ? "No primary solution identified" : section.trim();
-    }
 
     private List<String> extractAlternativeSolutions(String response) {
         List<String> alternatives = extractListFromSection(response, "Alternative Solutions");

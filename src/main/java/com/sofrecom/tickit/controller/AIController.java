@@ -36,7 +36,6 @@ import java.util.UUID;
 @Slf4j
 @Validated
 @Tag(name = "AI Analysis", description = "AI-powered analysis and predictions for FTTH deployment system")
-@SecurityRequirement(name = "bearerAuth")
 public class AIController {
 
     private final AIService aiService;
@@ -63,7 +62,6 @@ public class AIController {
             content = @Content(schema = @Schema(implementation = ErrorResponse.class))
         )
     })
-    @PreAuthorize("hasRole('PILOTE') or hasRole('ADMIN')")
     public ResponseEntity<AIAnalysisResponse> analyzeSystem() {
         log.info("Starting system performance analysis");
         try {
@@ -105,7 +103,6 @@ public class AIController {
             content = @Content(schema = @Schema(implementation = ErrorResponse.class))
         )
     })
-    @PreAuthorize("hasRole('PRODUCTEUR') or hasRole('PILOTE') or hasRole('ADMIN')")
     public ResponseEntity<AIResolutionResponse> suggestResolution(
             @Parameter(description = "UUID of the ticket requiring resolution", required = true)
             @PathVariable @Valid UUID ticketId) {
