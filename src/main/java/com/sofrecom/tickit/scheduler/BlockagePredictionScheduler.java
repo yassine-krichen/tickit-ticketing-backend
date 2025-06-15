@@ -32,8 +32,8 @@ public class BlockagePredictionScheduler {
 
     private static final int MAX_MESSAGE_LENGTH = 500;
     
-    // @Scheduled(cron = "0 0 2 */3 * *") // Runs at 2 AM every 3 days
-    @Scheduled(cron = "0 37 12 * * *") // for testing
+    @Scheduled(cron = "0 0 2 */3 * *") // Runs at 2 AM every 3 days
+    // @Scheduled(cron = "0 37 12 * * *") // for testing
     public void predictBlockages() {
         log.info("Starting daily blockage prediction check");
         
