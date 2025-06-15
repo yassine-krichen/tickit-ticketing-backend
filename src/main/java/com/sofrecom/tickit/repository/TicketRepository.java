@@ -1,5 +1,6 @@
 package com.sofrecom.tickit.repository;
 
+import com.sofrecom.tickit.model.CaseType;
 import com.sofrecom.tickit.model.Ticket;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -33,7 +34,7 @@ public interface TicketRepository extends PagingAndSortingRepository<Ticket, UUI
            "ORDER BY t.resolvedAt DESC")
     Page<Ticket> findSimilarResolvedTickets(@Param("keyword") String keyword,
                                            @Param("status") Ticket.Status status,
-                                           @Param("type") String type,
+                                           @Param("type") CaseType type,
                                            Pageable pageable);
    
     // Alternative method using List if you prefer
@@ -48,7 +49,7 @@ public interface TicketRepository extends PagingAndSortingRepository<Ticket, UUI
                                                Pageable pageable);
    
     // FIXED: Get ticket trends - corrected table name and database compatibility
-    @Query(value = "SELECT DATE(created_at) as date, COUNT(*) as count " +
+    @Query(value = "SELECT DATE(created_at) as date, CAST(COUNT(*) AS BIGINT) as count " +
                    "FROM ticket t " +
                    "WHERE t.created_at >= :startDate " +
                    "GROUP BY DATE(created_at) " +

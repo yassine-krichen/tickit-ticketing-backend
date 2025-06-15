@@ -5,20 +5,41 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class AIAnalysisResponse {
-    private String analysis;
-    private LocalDateTime timestamp;
-    private int dataPoints;
-    private AnalysisStatus status;
-    private String errorMessage;
+    private Map<String, Double> performanceMetrics;
+    private List<TrendInsight> trends;
+    private List<String> recommendations;
+    private List<RiskArea> riskAreas;
 
-    public enum AnalysisStatus {
-        SUCCESS, PARTIAL, ERROR
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class TrendInsight {
+        private String category;
+        private String description;
+        private double significance; // 0-1 scale
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class RiskArea {
+        private String area;
+        private String description;
+        private RiskLevel riskLevel;
+        private List<String> mitigationSteps;
+    }
+
+    public enum RiskLevel {
+        LOW, MEDIUM, HIGH
     }
 }
