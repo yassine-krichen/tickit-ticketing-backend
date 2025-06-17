@@ -115,7 +115,7 @@ public class WebSecurityConfig {
 				.antMatchers("/swagger-resources/**").permitAll()
 				.antMatchers("/swagger-ui.html").permitAll()
 				.antMatchers("/webjars/**").permitAll()
-				.antMatchers("actuator/**").permitAll()
+				.antMatchers("/actuator/**").permitAll()
 				.anyRequest().authenticated();
 
 		http.authenticationProvider(authenticationProvider());

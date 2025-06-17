@@ -236,8 +236,7 @@ private String extractPrimarySolution(String response) {
     
     // Format as ATT INFO if not already formatted
     if (!solution.isEmpty() && !solution.startsWith("ATT INFO")) {
-        solution = String.format("ATT INFO (Mail envoyé le %s): %s",
-            LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")),
+        solution = String.format("ATT INFO: %s",
             solution.trim());
     }
     

@@ -82,21 +82,68 @@ public class TicketServiceImpl implements TicketService {
     private static Map<CaseType, List<CaseType>> initTypeStepMappings() {
         Map<CaseType, List<CaseType>> mappings = new HashMap<>();
 
-        // GRAFIC case type can only have GRAFIC as step
+        // BO RIP: GC, Cablage, GC Cablage
+        mappings.put(CaseType.BO_RIP, Arrays.asList(
+                CaseType.BO_RIP_GC, 
+                CaseType.BO_RIP_CABLAGE, 
+                CaseType.BO_RIP_GC_CABLAGE
+        ));
+
+        // XOIP: XOIP (same for both type and step)
+        mappings.put(CaseType.XOIP, Collections.singletonList(CaseType.XOIP));
+
+        // Georeso: IMB, Site Support, Cable
+        mappings.put(CaseType.GEORESO, Arrays.asList(
+                CaseType.GEORESO_IMB, 
+                CaseType.GEORESO_SITE_SUPPORT, 
+                CaseType.GEORESO_CABLE
+        ));
+
+        // BRAME: Pre-Etude, Etude, Raccordement, Contrôle Travaux
+        mappings.put(CaseType.BRAME, Arrays.asList(
+                CaseType.BRAME_PRE_ETUDE, 
+                CaseType.BRAME_ETUDE,
+                CaseType.BRAME_RACCORDEMENT, 
+                CaseType.BRAME_CONTROLE_TRAVAUX
+        ));
+
+        // Interconnexion RIP Tiers: Phase 1, Phase 2, Contrôle Travaux
+        mappings.put(CaseType.INTERCONNEXION_RIP_TIERS, Arrays.asList(
+                CaseType.INTERCONNEXION_RIP_TIERS_PHASE_1, 
+                CaseType.INTERCONNEXION_RIP_TIERS_PHASE_2,
+                CaseType.INTERCONNEXION_RIP_TIERS_CONTROLE_TRAVAUX
+        ));
+
+        // Mutation: NATNE, NATHD, NAT42C
+        mappings.put(CaseType.MUTATION, Arrays.asList(
+                CaseType.MUTATION_NATNE, 
+                CaseType.MUTATION_NATHD, 
+                CaseType.MUTATION_NAT42C
+        ));
+
+        // Missing Cuivre Fibre: Doublon (note: need to add MISSING_CUIVRE_FIBRE_DOUBLON to CaseType enum)
+        // For now, using the existing MISSING_CUIVRE_FIBRE_CLASSIQUE as a placeholder
+        mappings.put(CaseType.MISSING_CUIVRE_FIBRE_CLASSIQUE, Arrays.asList(
+                CaseType.MISSING_CUIVRE_FIBRE_CLASSIQUE // Self-mapping until DOUBLON is added
+        ));
+
+        // Dommages: AFFECTATION_ET_MISE_EN_CAUSE, CREANCE, RAPPEL, MISE_EN_DEMEURE, DERNIERE_LETTRE, MISE_CONTENTIEUX, DEMANDE_DINFORMATIONS, CONTESTATION_OU_RECLAMATION, CLOTURE_DOSSIER
+        mappings.put(CaseType.DOMMAGES, Arrays.asList(
+                CaseType.AFFECTATION_ET_MISE_EN_CAUSE, 
+                CaseType.CREANCE, 
+                CaseType.RAPPEL,
+                CaseType.MISE_EN_DEMEURE, 
+                CaseType.DERNIERE_LETTRE, 
+                CaseType.MISE_CONTENTIEUX,
+                CaseType.DEMANDE_DINFORMATIONS, 
+                CaseType.CONTESTATION_OU_RECLAMATION, 
+                CaseType.CLOTURE_DOSSIER
+        ));
+
+        // GRAFIC: Grafic (same for both type and step)
         mappings.put(CaseType.GRAFIC, Collections.singletonList(CaseType.GRAFIC));
 
-        // BRAME case type with its valid steps
-        mappings.put(CaseType.BRAME, Arrays.asList(
-                CaseType.BRAME_PRE_ETUDE, CaseType.BRAME_ETUDE,
-                CaseType.BRAME_RACCORDEMENT, CaseType.BRAME_CONTROLE_TRAVAUX
-        ));
-
-        // XOIP case type with its valid steps
-        mappings.put(CaseType.XOIP, Arrays.asList(
-                CaseType.AFFECTATION_ET_MISE_EN_CAUSE, CaseType.CREANCE, CaseType.RAPPEL
-        ));
-
-        // Add more type-step mappings for different case types
+        // Legacy mappings for backward compatibility (if needed)
         mappings.put(CaseType.TRAVAUX_TIERS, Arrays.asList(
                 CaseType.CONTROLE_TRAVAUX
         ));
@@ -115,26 +162,28 @@ public class TicketServiceImpl implements TicketService {
     private static Map<String, Duration> initResponseSlaConfigs() {
         Map<String, Duration> slaConfigs = new HashMap<>();
 
-        // Format: "TYPE:STEP:PRIORITY" -> Duration
-        // P1 (high priority) tickets
-        slaConfigs.put("GRAFIC:GEORESO:P1", Duration.ofHours(2));
-        slaConfigs.put("GRAFIC:GEORESO_CABLE:P1", Duration.ofHours(2));
+        // GRAFIC configurations (high priority - deserves heavy attention)
+        slaConfigs.put("GRAFIC:GRAFIC:P1", Duration.ofHours(1));
+        slaConfigs.put("GRAFIC:GRAFIC:P2", Duration.ofHours(2));
+        slaConfigs.put("GRAFIC:GRAFIC:P3", Duration.ofHours(4));
+
+        // BRAME configurations (high priority - deserves heavy attention)
+        slaConfigs.put("BRAME:BRAME_PRE_ETUDE:P1", Duration.ofMinutes(30));
         slaConfigs.put("BRAME:BRAME_ETUDE:P1", Duration.ofHours(1));
         slaConfigs.put("BRAME:BRAME_RACCORDEMENT:P1", Duration.ofHours(1));
+        slaConfigs.put("BRAME:BRAME_CONTROLE_TRAVAUX:P1", Duration.ofHours(2));
 
-        // P2 (medium priority) tickets
-        slaConfigs.put("GRAFIC:GEORESO:P2", Duration.ofHours(4));
-        slaConfigs.put("GRAFIC:GEORESO_CABLE:P2", Duration.ofHours(4));
+        slaConfigs.put("BRAME:BRAME_PRE_ETUDE:P2", Duration.ofHours(2));
         slaConfigs.put("BRAME:BRAME_ETUDE:P2", Duration.ofHours(3));
         slaConfigs.put("BRAME:BRAME_RACCORDEMENT:P2", Duration.ofHours(3));
+        slaConfigs.put("BRAME:BRAME_CONTROLE_TRAVAUX:P2", Duration.ofHours(4));
 
-        // P3 (lower priority) tickets
-        slaConfigs.put("GRAFIC:GEORESO:P3", Duration.ofHours(8));
-        slaConfigs.put("GRAFIC:GEORESO_CABLE:P3", Duration.ofHours(8));
+        slaConfigs.put("BRAME:BRAME_PRE_ETUDE:P3", Duration.ofHours(4));
         slaConfigs.put("BRAME:BRAME_ETUDE:P3", Duration.ofHours(6));
         slaConfigs.put("BRAME:BRAME_RACCORDEMENT:P3", Duration.ofHours(6));
+        slaConfigs.put("BRAME:BRAME_CONTROLE_TRAVAUX:P3", Duration.ofHours(8));
 
-        // Default fallback durations if specific combination not found
+        // Default fallback durations for all other types
         slaConfigs.put("DEFAULT:P1", Duration.ofHours(2));
         slaConfigs.put("DEFAULT:P2", Duration.ofHours(4));
         slaConfigs.put("DEFAULT:P3", Duration.ofHours(8));
@@ -147,26 +196,28 @@ public class TicketServiceImpl implements TicketService {
     private static Map<String, Duration> initResolutionSlaConfigs() {
         Map<String, Duration> slaConfigs = new HashMap<>();
 
-        // Format: "TYPE:STEP:PRIORITY" -> Duration
-        // P1 (high priority) tickets
-        slaConfigs.put("GRAFIC:GEORESO:P1", Duration.ofHours(8));
-        slaConfigs.put("GRAFIC:GEORESO_CABLE:P1", Duration.ofHours(8));
+        // GRAFIC configurations (high priority - deserves heavy attention)
+        slaConfigs.put("GRAFIC:GRAFIC:P1", Duration.ofHours(4));
+        slaConfigs.put("GRAFIC:GRAFIC:P2", Duration.ofHours(8));
+        slaConfigs.put("GRAFIC:GRAFIC:P3", Duration.ofHours(24));
+
+        // BRAME configurations (high priority - deserves heavy attention)
+        slaConfigs.put("BRAME:BRAME_PRE_ETUDE:P1", Duration.ofHours(2));
         slaConfigs.put("BRAME:BRAME_ETUDE:P1", Duration.ofHours(4));
         slaConfigs.put("BRAME:BRAME_RACCORDEMENT:P1", Duration.ofHours(8));
+        slaConfigs.put("BRAME:BRAME_CONTROLE_TRAVAUX:P1", Duration.ofHours(12));
 
-        // P2 (medium priority) tickets
-        slaConfigs.put("GRAFIC:GEORESO:P2", Duration.ofHours(16));
-        slaConfigs.put("GRAFIC:GEORESO_CABLE:P2", Duration.ofHours(16));
+        slaConfigs.put("BRAME:BRAME_PRE_ETUDE:P2", Duration.ofHours(8));
         slaConfigs.put("BRAME:BRAME_ETUDE:P2", Duration.ofHours(12));
         slaConfigs.put("BRAME:BRAME_RACCORDEMENT:P2", Duration.ofHours(16));
+        slaConfigs.put("BRAME:BRAME_CONTROLE_TRAVAUX:P2", Duration.ofHours(24));
 
-        // P3 (lower priority) tickets
-        slaConfigs.put("GRAFIC:GEORESO:P3", Duration.ofHours(24));
-        slaConfigs.put("GRAFIC:GEORESO_CABLE:P3", Duration.ofHours(24));
-        slaConfigs.put("BRAME:BRAME_ETUDE:P3", Duration.ofHours(24));
-        slaConfigs.put("BRAME:BRAME_RACCORDEMENT:P3", Duration.ofHours(24));
+        slaConfigs.put("BRAME:BRAME_PRE_ETUDE:P3", Duration.ofHours(24));
+        slaConfigs.put("BRAME:BRAME_ETUDE:P3", Duration.ofDays(2));
+        slaConfigs.put("BRAME:BRAME_RACCORDEMENT:P3", Duration.ofDays(3));
+        slaConfigs.put("BRAME:BRAME_CONTROLE_TRAVAUX:P3", Duration.ofDays(5));
 
-        // Default fallback durations if specific combination not found
+        // Default fallback durations for all other types
         slaConfigs.put("DEFAULT:P1", Duration.ofHours(8));
         slaConfigs.put("DEFAULT:P2", Duration.ofHours(16));
         slaConfigs.put("DEFAULT:P3", Duration.ofDays(1));
