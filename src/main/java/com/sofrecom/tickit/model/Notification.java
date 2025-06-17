@@ -7,6 +7,9 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 import org.hibernate.annotations.Type;
 import org.hibernate.annotations.TypeDef;
 import org.hibernate.annotations.TypeDefs;
@@ -15,6 +18,7 @@ import javax.persistence.*;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -22,12 +26,7 @@ import java.util.Set;
  * Notifications are tied to specific users and can target users with specific roles.
  */
 @Entity
-@Table(name = "notifications", indexes = {
-    @Index(name = "idx_notification_user", columnList = "user_id"),
-    @Index(name = "idx_notification_read_flag", columnList = "read_flag"),
-    @Index(name = "idx_notification_type", columnList = "type"),
-    @Index(name = "idx_notification_created_at", columnList = "created_at")
-})
+@Table(name = "notifications")
 @TypeDefs({
     @TypeDef(name = "jsonb", typeClass = JsonBinaryType.class)
 })
@@ -53,16 +52,16 @@ public class Notification {
         name = "notification_target_roles",
         joinColumns = @JoinColumn(
             name = "notification_id",
+            nullable = false,
             foreignKey = @ForeignKey(
-                name = "fk_notification_role",
-                foreignKeyDefinition = "FOREIGN KEY (notification_id) REFERENCES notifications(id) ON DELETE CASCADE"
+                name = "fk_notification_role"
             )
         )
     )
     @Column(name = "role")
     @Enumerated(EnumType.STRING)
     @Schema(description = "Target roles for this notification")
-    private Set<ERole> target;
+    private Set<ERole> target = new HashSet<>();
 
     @NotNull
     @Size(max = 500)
