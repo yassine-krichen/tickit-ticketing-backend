@@ -800,8 +800,8 @@ public class TicketServiceImpl implements TicketService {
             String sortField,
             String sortDir,
             String q,
-            Ticket.Status status,
-            Ticket.Priority priority,
+            List<Ticket.Status> statuses,
+            List<Ticket.Priority> priorities,
             List<CaseType> types,
             List<CaseType> steps) {
 
@@ -816,14 +816,16 @@ public class TicketServiceImpl implements TicketService {
         if (q != null && !q.trim().isEmpty()) {
             spec = spec.and(TicketSpecification.containsText(q));
         }
-        if (status != null) {
-            spec = spec.and(TicketSpecification.hasStatus(status));
+
+        // Updated to use multiple values for status and priority
+        if (statuses != null && !statuses.isEmpty()) {
+            spec = spec.and(TicketSpecification.hasAnyStatus(statuses));
         }
-        if (priority != null) {
-            spec = spec.and(TicketSpecification.hasPriority(priority));
+        if (priorities != null && !priorities.isEmpty()) {
+            spec = spec.and(TicketSpecification.hasAnyPriority(priorities));
         }
 
-        // Add new type and step filters
+        // Existing type and step filters (already support multiple values)
         if (types != null && !types.isEmpty()) {
             spec = spec.and(TicketSpecification.hasAnyType(types));
         }

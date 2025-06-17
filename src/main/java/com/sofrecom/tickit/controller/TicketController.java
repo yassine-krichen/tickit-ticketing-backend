@@ -65,7 +65,8 @@ public class TicketController {
      * @return A ResponseEntity containing the paginated list of tickets or an error response.
      */
     @Operation(summary = "Get paginated tickets",
-               description = "Returns a paginated list of tickets with filtering and sorting options.")
+               description = "Returns a paginated list of tickets with filtering and sorting options. " +
+                            "Supports multiple values for status, priority, types, and steps parameters.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200",
                     description = "Successfully retrieved tickets",
@@ -86,7 +87,6 @@ public class TicketController {
 
             @Parameter(description = "Field to sort by. Allowed values: timestamp, title, priority, status", example = "timestamp")
             @RequestParam(defaultValue = "timestamp")
-            // Basic pattern check, more specific validation in service
             @Pattern(regexp = "^(timestamp|title|priority|status)$", message = "Invalid sort field. Allowed: timestamp, title, priority, status")
             String sortField,
 
@@ -98,17 +98,22 @@ public class TicketController {
             @Parameter(description = "Optional free-text search across subject and description", example = "database connection")
             @RequestParam(required = false) String q,
 
-            @Parameter(description = "Optional filter by ticket status", example = "OPEN")
-            @RequestParam(required = false) Ticket.Status status,
+            @Parameter(description = "Optional filter by ticket statuses (supports multiple values)", 
+                       example = "OPEN", 
+                       schema = @Schema(type = "array", implementation = Ticket.Status.class))
+            @RequestParam(required = false) List<Ticket.Status> status,
 
-            @Parameter(description = "Optional filter by ticket priority", example = "P1")
-            @RequestParam(required = false) Ticket.Priority priority,
+            @Parameter(description = "Optional filter by ticket priorities (supports multiple values)", 
+                       example = "P1", 
+                       schema = @Schema(type = "array", implementation = Ticket.Priority.class))
+            @RequestParam(required = false) List<Ticket.Priority> priority,
 
-            // Add new parameters
-            @Parameter(description = "Filter by case types") 
+            @Parameter(description = "Filter by case types (supports multiple values)", 
+                       schema = @Schema(type = "array", implementation = CaseType.class)) 
             @RequestParam(required = false) List<CaseType> types,
 
-            @Parameter(description = "Filter by case steps") 
+            @Parameter(description = "Filter by case steps (supports multiple values)", 
+                       schema = @Schema(type = "array", implementation = CaseType.class)) 
             @RequestParam(required = false) List<CaseType> steps) {
         
         // Service layer handles validation of sortField/sortDir logic and performs the query

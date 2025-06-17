@@ -163,4 +163,34 @@ public class TicketSpecification {
         return (root, query, cb) -> priority == null ? null : 
             cb.equal(root.get("priority"), priority);
     }
+
+    /**
+     * Creates a Specification for tickets with any of the specified statuses.
+     *
+     * @param statuses List of statuses to filter by
+     * @return A Specification<Ticket> for tickets with any of the specified statuses
+     */
+    public static Specification<Ticket> hasAnyStatus(List<Ticket.Status> statuses) {
+        return (root, query, cb) -> {
+            if (statuses == null || statuses.isEmpty()) {
+                return null;
+            }
+            return root.get("status").in(statuses);
+        };
+    }
+
+    /**
+     * Creates a Specification for tickets with any of the specified priorities.
+     *
+     * @param priorities List of priorities to filter by
+     * @return A Specification<Ticket> for tickets with any of the specified priorities
+     */
+    public static Specification<Ticket> hasAnyPriority(List<Ticket.Priority> priorities) {
+        return (root, query, cb) -> {
+            if (priorities == null || priorities.isEmpty()) {
+                return null;
+            }
+            return root.get("priority").in(priorities);
+        };
+    }
 }

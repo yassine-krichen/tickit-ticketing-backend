@@ -63,10 +63,10 @@ public interface TicketService {
      * @param sortField  The field to sort by (e.g., "createdAt", "subject", "priority", "status").
      * @param sortDir    The sort direction ("asc" or "desc").
      * @param q          Optional free-text search query for subject/description.
-     * @param status     Optional filter by ticket status.
-     * @param priority   Optional filter by ticket priority.
-     * @param types      Optional filter by ticket types.
-     * @param steps      Optional filter by ticket steps.
+     * @param statuses   Optional filter by ticket statuses (supports multiple values).
+     * @param priorities Optional filter by ticket priorities (supports multiple values).
+     * @param types      Optional filter by ticket types (supports multiple values).
+     * @param steps      Optional filter by ticket steps (supports multiple values).
      * @return A Page containing the requested Ticket entities.
      * @throws com.sofrecom.tickit.exception.InvalidSortParameterException if sortField or sortDir is invalid.
      */
@@ -76,8 +76,8 @@ public interface TicketService {
             String sortField,
             String sortDir,
             String q,
-            Ticket.Status status,
-            Ticket.Priority priority,
+            List<Ticket.Status> statuses,
+            List<Ticket.Priority> priorities,
             List<CaseType> types,
             List<CaseType> steps
     );
