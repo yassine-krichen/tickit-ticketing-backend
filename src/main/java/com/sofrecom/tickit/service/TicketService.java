@@ -65,6 +65,8 @@ public interface TicketService {
      * @param q          Optional free-text search query for subject/description.
      * @param status     Optional filter by ticket status.
      * @param priority   Optional filter by ticket priority.
+     * @param types      Optional filter by ticket types.
+     * @param steps      Optional filter by ticket steps.
      * @return A Page containing the requested Ticket entities.
      * @throws com.sofrecom.tickit.exception.InvalidSortParameterException if sortField or sortDir is invalid.
      */
@@ -75,7 +77,9 @@ public interface TicketService {
             String sortDir,
             String q,
             Ticket.Status status,
-            Ticket.Priority priority
+            Ticket.Priority priority,
+            List<CaseType> types,
+            List<CaseType> steps
     );
 
     /**

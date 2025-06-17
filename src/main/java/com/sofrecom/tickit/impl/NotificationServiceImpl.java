@@ -253,7 +253,26 @@ public class NotificationServiceImpl implements NotificationService {
         }
         
         User currentUser = getCurrentUser();
-        return notificationRepository.deleteByIdInAndUserRef(ids, currentUser);
+        
+        // First verify the notifications exist and belong to the user
+        List<Notification> notifications = notificationRepository.findByIdInAndUserRef(ids, currentUser);
+        
+        if (notifications.isEmpty()) {
+            return 0;
+        }
+        
+        // Get the actual IDs of found notifications
+        List<Long> actualIds = notifications.stream()
+            .map(Notification::getId)
+            .collect(Collectors.toList());
+        
+        // Delete the notifications using the entity manager to cascade the deletion
+        notifications.forEach(notification -> {
+            notification.getTarget().clear(); // Clear the target roles first
+            notificationRepository.delete(notification);
+        });
+        
+        return actualIds.size();
     }
     
     /**
