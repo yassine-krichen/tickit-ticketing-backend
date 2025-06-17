@@ -54,7 +54,9 @@ public class AutomationService {
         
         // Find all non-closed cases
         List<CaseResponse> activeCases = caseService.getAllCases().stream()
-            .filter(caseResponse -> caseResponse.getStatus() != Case.Status.CLOSED && 
+            .filter(caseResponse -> caseResponse != null && 
+                                    caseResponse.getStatus() != null && 
+                                    caseResponse.getStatus() != Case.Status.CLOSED && 
                                     caseResponse.getStatus() != Case.Status.CANCELED)
             .collect(Collectors.toList());
         
@@ -235,7 +237,9 @@ public class AutomationService {
         
         // Find all active cases
         List<CaseResponse> activeCases = caseService.getAllCases().stream()
-            .filter(caseResponse -> caseResponse.getStatus() == Case.Status.ONGOING)
+            .filter(caseResponse -> caseResponse != null && 
+                                    caseResponse.getStatus() != null && 
+                                    caseResponse.getStatus() == Case.Status.ONGOING)
             .collect(Collectors.toList());
         
         log.info("Found {} active cases to check", activeCases.size());
