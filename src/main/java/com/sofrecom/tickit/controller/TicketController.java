@@ -32,11 +32,11 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import java.util.HashMap;
 
 /**
  * REST controller for managing Tickets.
@@ -101,11 +101,19 @@ public class TicketController {
             @Parameter(description = "Optional filter by ticket status", example = "OPEN")
             @RequestParam(required = false) Ticket.Status status,
 
-            @Parameter(description = "Optional filter by ticket priority", example = "HIGH")
-            @RequestParam(required = false) Ticket.Priority priority
-    ) {
+            @Parameter(description = "Optional filter by ticket priority", example = "P1")
+            @RequestParam(required = false) Ticket.Priority priority,
+
+            // Add new parameters
+            @Parameter(description = "Filter by case types") 
+            @RequestParam(required = false) List<CaseType> types,
+
+            @Parameter(description = "Filter by case steps") 
+            @RequestParam(required = false) List<CaseType> steps) {
+        
         // Service layer handles validation of sortField/sortDir logic and performs the query
-        Page<Ticket> ticketPage = ticketService.getTickets(page, size, sortField, sortDir, q, status, priority);
+        Page<Ticket> ticketPage = ticketService.getTickets(
+                page, size, sortField, sortDir, q, status, priority, types, steps);
 
         // Map Page<Ticket> to PaginatedResponse<TicketResponse>
         PaginatedResponse<TicketResponse> response = ticketMapper.toPaginatedResponse(ticketPage);

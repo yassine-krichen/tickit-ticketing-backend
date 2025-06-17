@@ -1,5 +1,6 @@
 package com.sofrecom.tickit.repository;
 
+import com.sofrecom.tickit.model.CaseType;
 import com.sofrecom.tickit.model.Ticket;
 import javax.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
@@ -122,4 +123,44 @@ public class TicketSpecification {
         };
     }
 
+    public static Specification<Ticket> hasAnyType(List<CaseType> types) {
+        return (root, query, cb) -> {
+            if (types == null || types.isEmpty()) {
+                return null;
+            }
+            return root.get("type").in(types);
+        };
+    }
+
+    public static Specification<Ticket> hasAnyStep(List<CaseType> steps) {
+        return (root, query, cb) -> {
+            if (steps == null || steps.isEmpty()) {
+                return null;
+            }
+            return root.get("step").in(steps);
+        };
+    }
+
+    public static Specification<Ticket> containsText(String searchText) {
+        return (root, query, cb) -> {
+            if (searchText == null || searchText.trim().isEmpty()) {
+                return null;
+            }
+            String pattern = "%" + searchText.toLowerCase() + "%";
+            return cb.or(
+                cb.like(cb.lower(root.get("subject")), pattern),
+                cb.like(cb.lower(root.get("description")), pattern)
+            );
+        };
+    }
+
+    public static Specification<Ticket> hasStatus(Ticket.Status status) {
+        return (root, query, cb) -> status == null ? null : 
+            cb.equal(root.get("status"), status);
+    }
+
+    public static Specification<Ticket> hasPriority(Ticket.Priority priority) {
+        return (root, query, cb) -> priority == null ? null : 
+            cb.equal(root.get("priority"), priority);
+    }
 }

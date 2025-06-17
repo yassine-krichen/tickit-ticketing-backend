@@ -773,21 +773,36 @@ public class TicketServiceImpl implements TicketService {
             String sortDir,
             String q,
             Ticket.Status status,
-            Ticket.Priority priority) {
+            Ticket.Priority priority,
+            List<CaseType> types,
+            List<CaseType> steps) {
 
-        // Validate and map sort field
         String actualSortField = mapAndValidateSortField(sortField);
-
-        // Validate sort direction
         Sort.Direction direction = validateSortDirection(sortDir);
-
-        // Create Pageable object
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, actualSortField));
 
-        // Create Specification for filtering
-        Specification<Ticket> spec = TicketSpecification.filterBy(q, status, priority);
+        // Create base specification
+        Specification<Ticket> spec = Specification.where(null);
 
-        // Fetch data from repository
+        // Add existing filters
+        if (q != null && !q.trim().isEmpty()) {
+            spec = spec.and(TicketSpecification.containsText(q));
+        }
+        if (status != null) {
+            spec = spec.and(TicketSpecification.hasStatus(status));
+        }
+        if (priority != null) {
+            spec = spec.and(TicketSpecification.hasPriority(priority));
+        }
+
+        // Add new type and step filters
+        if (types != null && !types.isEmpty()) {
+            spec = spec.and(TicketSpecification.hasAnyType(types));
+        }
+        if (steps != null && !steps.isEmpty()) {
+            spec = spec.and(TicketSpecification.hasAnyStep(steps));
+        }
+
         return ticketRepository.findAll(spec, pageable);
     }
 
