@@ -19,6 +19,7 @@ import com.sofrecom.tickit.repository.TicketSpecification;
 import com.sofrecom.tickit.service.CaseService;
 import com.sofrecom.tickit.service.TicketActivityService;
 import com.sofrecom.tickit.service.TicketService;
+import com.sofrecom.tickit.service.PrestationValidationService;
 import com.sofrecom.tickit.util.AuthUtils;
 
 import lombok.RequiredArgsConstructor;
@@ -59,7 +60,8 @@ public class TicketServiceImpl implements TicketService {
     private final TicketActivityService ticketActivityService;
     private final CaseService caseService;
     private final ApplicationEventPublisher eventPublisher;
-    private final AuthUtils authUtils; // Assuming you have an AuthUtils class for authentication
+    private final AuthUtils authUtils;
+    private final PrestationValidationService prestationValidationService; // Add this
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -229,6 +231,7 @@ public class TicketServiceImpl implements TicketService {
 
     /**
      * Creates a new ticket and updates the associated case status to BLOCKED.
+     * Now includes validation that the ticket type matches the treatment act's prestation type.
      *
      * @param ticket The ticket to create
      * @return The created ticket
@@ -243,6 +246,11 @@ public class TicketServiceImpl implements TicketService {
                     !isValidTypeStepCombination(ticket.getType(), ticket.getStep())) {
                 throw new EntityCreationException("Ticket",
                         "Invalid type-step combination: " + ticket.getType() + " cannot have step " + ticket.getStep());
+            }
+
+            // NEW VALIDATION: Check if ticket type matches treatment act's prestation type
+            if (ticket.getActeTraitement() != null && ticket.getType() != null) {
+                validateTicketTypeAgainstPrestation(ticket);
             }
 
             LocalDateTime now = LocalDateTime.now();
@@ -269,13 +277,33 @@ public class TicketServiceImpl implements TicketService {
             TicketActivityRequest startActivity = new TicketActivityRequest();
             startActivity.setType(TicketActivity.ActivityType.OPEN);
             startActivity.setDescription("Ticket created");
-            startActivity.setUsername(authUtils.getUsernameFromFingerprint(ticket.getIssuedBy())); // change wit auth utils TODO
+            startActivity.setUsername(authUtils.getUsernameFromFingerprint(ticket.getIssuedBy()));
             ticketActivityService.createActivity(savedTicket.getId(), startActivity);
             
             return savedTicket;
         } catch (Exception e) {
             throw new EntityCreationException("Ticket", "Failed to create ticket: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * Simple validation method using the dedicated validation service
+     */
+    private void validateTicketTypeAgainstPrestation(Ticket ticket) throws EntityCreationException {
+        String treatmentActId = ticket.getActeTraitement().getIdacte();
+        CaseType ticketType = ticket.getType();
+        
+        log.debug("Validating ticket type {} against treatment act {}", ticketType, treatmentActId);
+        
+        PrestationValidationService.ValidationResult result = 
+            prestationValidationService.validateTicketType(treatmentActId, ticketType);
+        
+        if (!result.isValid()) {
+            log.error("Ticket type validation failed: {}", result.getErrorMessage());
+            throw new EntityCreationException("Ticket", result.getErrorMessage());
+        }
+        
+        log.info("Ticket type {} is valid for treatment act {}", ticketType, treatmentActId);
     }
 
     @Override

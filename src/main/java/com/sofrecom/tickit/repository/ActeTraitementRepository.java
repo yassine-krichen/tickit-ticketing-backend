@@ -51,4 +51,10 @@ public interface ActeTraitementRepository extends JpaRepository<Acte_traitement,
      */
     @Query("SELECT a FROM Acte_traitement a WHERE a.typeprestation.id = :prestationId AND a.isDeleted = false")
     List<Acte_traitement> findByPrestationId(@Param("prestationId") String prestationId);
+   
+    /**
+     * Get prestation ID for a treatment act (for validation purposes only)
+     */
+    @Query("SELECT a.typeprestation.idPrestation FROM Acte_traitement a WHERE a.idacte = :treatmentActId AND a.isDeleted = false")
+    Optional<Long> getPrestationIdByTreatmentActId(@Param("treatmentActId") String treatmentActId);
 }
