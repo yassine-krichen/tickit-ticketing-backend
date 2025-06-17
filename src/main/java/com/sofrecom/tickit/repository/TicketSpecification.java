@@ -193,4 +193,18 @@ public class TicketSpecification {
             return root.get("priority").in(priorities);
         };
     }
+
+    public static Specification<Ticket> containsTextByCategory(String searchText, String category) {
+        return (root, query, cb) -> {
+            if (!StringUtils.hasText(searchText)) {
+                return cb.conjunction();
+            }
+            String pattern = "%" + searchText.toLowerCase() + "%";
+            if ("description".equalsIgnoreCase(category)) {
+                return cb.like(cb.lower(root.get("description")), pattern);
+            }
+            // Default to searching in subject for any other category value (e.g., "title")
+            return cb.like(cb.lower(root.get("subject")), pattern);
+        };
+    }
 }

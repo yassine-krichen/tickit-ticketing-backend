@@ -800,6 +800,7 @@ public class TicketServiceImpl implements TicketService {
             String sortField,
             String sortDir,
             String q,
+            String category,
             List<Ticket.Status> statuses,
             List<Ticket.Priority> priorities,
             List<CaseType> types,
@@ -813,8 +814,15 @@ public class TicketServiceImpl implements TicketService {
         Specification<Ticket> spec = Specification.where(null);
 
         // Add existing filters
+        // Apply free-text search:
         if (q != null && !q.trim().isEmpty()) {
-            spec = spec.and(TicketSpecification.containsText(q));
+            if (category != null && !category.trim().isEmpty()) {
+                // Use the new specification to search in only the chosen field
+                spec = spec.and(TicketSpecification.containsTextByCategory(q, category));
+            } else {
+                // No category provided, search in both subject and description
+                spec = spec.and(TicketSpecification.containsText(q));
+            }
         }
 
         // Updated to use multiple values for status and priority

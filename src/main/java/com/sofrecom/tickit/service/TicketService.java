@@ -76,6 +76,7 @@ public interface TicketService {
             String sortField,
             String sortDir,
             String q,
+            String category,
             List<Ticket.Status> statuses,
             List<Ticket.Priority> priorities,
             List<CaseType> types,

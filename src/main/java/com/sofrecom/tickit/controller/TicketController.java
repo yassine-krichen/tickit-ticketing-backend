@@ -98,6 +98,9 @@ public class TicketController {
             @Parameter(description = "Optional free-text search across subject and description", example = "database connection")
             @RequestParam(required = false) String q,
 
+            @Parameter(description = "Optional category search choice between subject and description", example = "Title")
+            @RequestParam(required = false) String category,
+
             @Parameter(description = "Optional filter by ticket statuses (supports multiple values)", 
                        example = "OPEN", 
                        schema = @Schema(type = "array", implementation = Ticket.Status.class))
@@ -118,7 +121,7 @@ public class TicketController {
         
         // Service layer handles validation of sortField/sortDir logic and performs the query
         Page<Ticket> ticketPage = ticketService.getTickets(
-                page, size, sortField, sortDir, q, status, priority, types, steps);
+                page, size, sortField, sortDir, q, category,status, priority, types, steps);
 
         // Map Page<Ticket> to PaginatedResponse<TicketResponse>
         PaginatedResponse<TicketResponse> response = ticketMapper.toPaginatedResponse(ticketPage);
