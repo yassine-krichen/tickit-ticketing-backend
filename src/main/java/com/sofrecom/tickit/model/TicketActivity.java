@@ -65,6 +65,7 @@ public class TicketActivity {
         name = "ticket_id",
         nullable = false,
         foreignKey = @ForeignKey(name = "fk_activity_ticket")
+        
     )
     private Ticket ticket;
 
