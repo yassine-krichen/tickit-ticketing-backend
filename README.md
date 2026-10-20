@@ -1,236 +1,176 @@
 <div align="center">
-  <img src="assets/cover.png" alt="TickIT cover" width="100%"  />
-  <h1>TickIT <sup><sub>v0.0.1</sub></sup></h1>
+  <img src="assets/cover.png" alt="TickIT cover" width="100%" />
+  <h1>TickIT backend</h1>
+  <p><em>Ticketing API for fiber installation cases, with STOMP notifications, a hash-chained audit ledger and a RAG fix-suggestion assistant.</em></p>
 
-![Java](https://img.shields.io/badge/Java-1.8-red?logo=java)
+![Java](https://img.shields.io/badge/Java-8-red?logo=openjdk)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-2.5.9-6DB33F?logo=spring-boot)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-11.9-336791?logo=postgresql)
-![License](https://img.shields.io/badge/license-Proprietary-blue)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?logo=postgresql)
+![ChromaDB](https://img.shields.io/badge/ChromaDB-RAG-orange)
+![License](https://img.shields.io/badge/license-PolyForm%20Strict-blue)
 
-<p><em>Fiber deployment case management with AI-powered blockage analysis and real-time status tracking.</em></p>
 </div>
 
----
+> Frontend: [tickit-ticketing-frontend](https://github.com/yassine-krichen/tickit-ticketing-frontend)
 
-## Table of Contents
+## Context
 
-- [Pitch](#pitch)
-- [Features](#features)
-- [How It Works](#how-it-works)
-- [Tech Stack](#tech-stack)
-- [Getting Started](#getting-started)
-- [Configuration](#configuration)
-- [API Endpoints](#api-endpoints)
-- [Roadmap](#roadmap)
-- [License](#license)
-- [Before You Publish](#before-you-publish)
+Built during my internship at Sofrecom Tunisie (Orange Group), February to June 2025, for the FTTH (fiber-to-the-home) installation team of roughly 40 people. The team tracked installation requests through email threads and shared files. TickIT replaces that with one system of record. The data in this repository is synthetic.
 
----
+## What it does
 
-## Pitch
+An installation request moves through several phases (analysis, data retrieval, validation, assignment, treatment). In an email thread nobody can tell which phase a request is stuck in, who touched it last, or whether the deadline is at risk.
 
-Orange France processes fiber extension requests ("cases") through Sofrecom's BoTool platform. When a case gets blocked — waiting on external data, stuck in approval, or delayed by team capacity — visibility disappears. Tickets stall silently; customers wait without knowing why.
+TickIT models each request as a case with treatment acts, tickets, activities and comments. Every state change is written to an append-only ledger where each entry stores the hash of the previous one and an RSA signature, so edits to history are detectable. Users get STOMP push notifications instead of polling. When a ticket is blocked, an assistant retrieves the three most similar past blockages from a ChromaDB index and asks a local LLM (Ollama) for a resolution suggestion.
 
-TickIT replaces opaque ticket status with granular state breakdowns: each case phase is decomposed into sub-states (analysis → data retrieval → validation → assignment → resolution). When a case stalls, the exact bottleneck surfaces in milliseconds, not weeks.
-
-The system adds an AI layer that learns from case history, predicts which cases will block before they do, and suggests resolution strategies based on similar past cases. A local LLM (Ollama hermes3) analyzes case metadata without external API calls — critical for handling sensitive fiber network data.
-
-Real-time WebSocket notifications keep teams synchronized; semantic search over ChromaDB retrieves similar historical cases 60% faster than keyword search; and an immutable audit trail (blockchain-style logging) proves compliance with SLA timelines.
-
----
+The LLM runs locally because ticket text describes a telecom operator's network. The cost is latency: about 5.6 s per suggestion on CPU (see [measurements](measurements/METRICS.md)).
 
 ## Features
 
-**Granular Status Management** — Subdivide ticket "in progress" into 8 sub-states (intake, validation, assignment, resource scheduling, install planning, install execution, QA, billing). Each state transition is logged, auditable, and visible in real-time.
+**Case and ticket management** — Cases, treatment acts, tickets, activities and comments with RSQL filtering, search, status counts and period statistics (`/api/v1/cases`, `/tickets`, `/treatments`).
 
-**AI-Powered Resolution Suggestions** — Ollama hermes3 LLM analyzes the current case and retrieves similar resolved cases via semantic search (ChromaDB + sentence-transformers), then generates resolution recommendations with estimated effort and SLA impact.
+**Role-based access** — JWT (HS512) authentication with five roles (`ROLE_USER`, `ROLE_PRODUCTEUR`, `ROLE_PILOTE`, `ROLE_DIRECTION`, `ROLE_ADMIN`); the same JWT is validated on the STOMP CONNECT frame.
 
-**Blockage Prediction** — ML model trained on historical case durations predicts which cases will breach SLA 72 hours before breach occurs, sending escalation alerts to team leads.
+**Real-time notifications** — STOMP over WebSocket at `/ws` with `/topic`, `/queue` and per-user destinations, plus persisted notifications with read, delete and paging endpoints.
 
-**Real-Time Collaboration** — STOMP WebSocket endpoint broadcasts case state changes to all connected clients; team members see status updates and comments without page refreshes.
+**Tamper-evident audit trail** — `LedgerEntry` rows chained by SHA-256 hash from a `GENESIS` entry, each signed with `SHA256withRSA`; `/api/v1/ledger-entries/verification/blockchain` re-walks the chain.
 
-**Immutable Audit Trail** — Every state transition, status change, and SLA event is logged with cryptographic signing, enabling compliance audits and dispute resolution.
+**Fix-suggestion assistant** — Top-3 semantic retrieval over historical blockage records (`all-MiniLM-L6-v2` embeddings in ChromaDB), then a prompt to a local Ollama model; `POST /api/v1/ai/suggest/{ticketId}`.
 
-**Rate-Limited Public API** — RESTful endpoints for case creation, status query, and comment submission with per-IP rate limiting and request logging.
+**Blockage-risk alerts** — A scheduled job asks the LLM to rate treatment acts due within seven days and creates a notification for any rated above low risk.
 
-**Permission-Based Access Control** — Role-based access control (RBAC) at endpoint level; users see only their cases + shared cases in their team.
+**SLA automation** — Cron jobs flag overdue cases and response or resolution SLA breaches; schedules are configurable.
 
----
+**Attachments** — Disk-backed file storage for ticket attachments with a size limit.
 
-## How It Works
+## How it works
 
-### Architecture
+```mermaid
+graph TD
+  UI[Angular client] --JWT REST--> API[Spring Boot API]
+  UI --STOMP /ws--> API
+  API --JPA--> PG[(PostgreSQL)]
+  API --hash + RSA sign--> LEDGER[Ledger entries]
+  LEDGER --stored in--> PG
+  API --POST /retrieve top_k=3--> RAG[FastAPI RAG service]
+  RAG --vector query--> CHROMA[(ChromaDB)]
+  API --prompt + context--> LLM[Ollama]
+  SCHED[Schedulers] --SLA checks, risk prediction--> API
+```
 
-![System Architecture](assets/class-diagram.png)
-*TickIT system architecture and component relationships.*
+### Key decisions
 
-![Use Cases](assets/use-case-diagram.png)
-*Core user workflows and system interactions.*
+- **Top-3 retrieval over prompt stuffing**: ChromaDB with sentence-transformers over the previous approach of dumping five keyword-matched tickets into the prompt. Average prompt size drops from 612 to 244 tokens (-60%), with precision@1 of 18/20 on 20 queries against 90 synthetic blockage records.
+- **Local LLM over a hosted API**: Ollama (`hermes3:3b`) over a cloud model because ticket content is operator network data. The price is 3.5 to 10.4 s per suggestion on a CPU.
+- **Hash-chained, signed ledger over a plain audit table**: a table can be edited silently. A chain with signatures makes any edit detectable by walking it, without running a distributed ledger.
+- **STOMP over raw WebSocket**: subscriptions, per-user destinations and message-level auth come from Spring, so there is no custom frame handling. Measured with k6: 30 concurrent clients, 100 events, 8 ms average and 35 ms P95 round trip, no drops.
+- **Relational model**: PostgreSQL and Spring Data JPA, because cases, treatment acts and activities form a strict hierarchy that benefits from foreign keys and transactions.
 
-### Key Decisions
+## Tech stack
 
-- **Semantic search over keyword matching**: Historical case lookup uses ChromaDB + `sentence-transformers/all-MiniLM-L6-v2` instead of SQL LIKE queries. Token cost reduced 60% (612→244 tokens per context); retrieval latency 20ms; precision@1 = 0.90. Keyword search would require manual prompt engineering for each case type.
+| Technology | Role | Why |
+| --- | --- | --- |
+| Spring Boot 2.5.9, Java 8 | REST API, WebSocket, schedulers | — |
+| PostgreSQL, Spring Data JPA, RSQL | Persistence and filtering | RSQL gives clients composable filters without one endpoint per query |
+| Spring Security, JJWT 0.9.1 | Authentication | — |
+| MapStruct, Lombok | DTO mapping | — |
+| STOMP over WebSocket | Notifications | — |
+| FastAPI, ChromaDB, sentence-transformers | RAG service in `ai-module/` | Separate Python process, since the embedding stack is Python |
+| Ollama | Local LLM | Data stays on the host |
+| k6 | WebSocket load test | — |
+| Springdoc OpenAPI | API docs | — |
 
-- **Local LLM instead of OpenAI API**: Ollama hermes3 runs on CPU, no external API calls, handles sensitive telecom data locally. Trade-off: 5.6s per query on CPU vs 200ms on GPT-4, but eliminates data egress risk and vendor lock-in.
-
-- **STOMP over raw WebSocket**: Standardized messaging protocol with subscriptions, acknowledgments, and error handling. Avoids custom frame parsing; enables browser fallback via SockJS.
-
-- **Immutable audit logging**: Every state transition signed with HMAC-SHA256. Enables proof of SLA compliance; prevents disputes over timing claims.
-
-- **PostgreSQL + Spring Data JPA over NoSQL**: Relational schema enforces data consistency for case hierarchies (case → activities → comments). JSON columns for flexible metadata. Transactional guarantees protect multi-step workflows.
-
----
-
-## Tech Stack
-
-| Technology                       | Role                          | Why                                                                          |
-| -------------------------------- | ----------------------------- | ---------------------------------------------------------------------------- |
-| Spring Boot 2.5.9                | REST API + WebSocket handler  | Mature ecosystem; Spring Security for RBAC; Spring Data JPA for transactions |
-| Java 1.8                         | Compiled target               | Matches production JDK; compatible with Spring Boot 2.5                      |
-| PostgreSQL 11.9                  | Case + ticket storage         | ACID transactions for multi-step case workflows; JSON for flexible metadata  |
-| STOMP + SockJS                   | Real-time notifications       | Standardized protocol; browser fallback; Spring integration                  |
-| JWT (HS512)                      | Stateless auth                | Signed tokens; no session storage; embeds user roles                         |
-| Ollama hermes3                   | Local LLM                     | Processes case data without external APIs; runs on CPU                       |
-| ChromaDB + sentence-transformers | Semantic case search          | Vector similarity search; 60% token reduction vs flat-file prompting         |
-| Spring Security                  | Access control                | Decorator-based permission checks; WebSocket message-level auth              |
-| Lombok 1.18.34                   | Reduce boilerplate            | JDK 21 compatible; cuts entity/DTO verbosity                                 |
-| Maven 3.9.2                      | Build & dependency management | —                                                                            |
-
----
-
-## Getting Started
+## Getting started
 
 ### Prerequisites
 
-- Java 1.8 (or higher; tested with JDK 21 Temurin)
-- Maven 3.9.2+
-- PostgreSQL 11.9+ (local or remote)
-- Ollama (for AI features; hermes3:3b model, ~2GB)
+- JDK 8 or newer, Maven wrapper included
+- PostgreSQL
+- Python 3.10+ and Ollama with `hermes3:3b`, only for the AI features
 
-### Clone
-
-```bash
-git clone https://github.com/sofrecom/tickit-backend.git
-cd tickit-backend
-```
-
-### Install Dependencies
+### Run
 
 ```bash
-mvn clean install
+git clone https://github.com/yassine-krichen/tickit-ticketing-backend.git
+cd tickit-ticketing-backend
+cp .env.example .env   # fill in values, see Configuration
+./mvnw spring-boot:run
 ```
 
-### Configure Database
+The API listens on `http://localhost:8080`, WebSocket on `ws://localhost:8080/ws`.
+
+### RAG service (optional)
 
 ```bash
-# Create PostgreSQL database and user
-psql -U postgres -c "CREATE DATABASE tickit;"
-psql -U postgres -d tickit -c "GRANT ALL PRIVILEGES ON DATABASE tickit TO postgres;"
+cd ai-module
+pip install -r requirements.txt
+python ingest.py        # builds the ChromaDB index from data/blockage_records.json
+python rag_service.py   # listens on :8001
 ```
 
-### Configure Environment
-
-Copy `.env.example` to `.env` (or set via `-D` flags):
-
-```bash
-# Example configuration
-export TICKIT_SECURITY_JWT_SECRET="your-secret-key-min-32-chars"
-export TICKIT_SECURITY_JWT_EXPIRATION_MS=86400000
-export SPRING_DATASOURCE_URL="jdbc:postgresql://localhost:5432/tickit"
-export SPRING_DATASOURCE_USERNAME="postgres"
-export SPRING_DATASOURCE_PASSWORD="postgres"
-```
-
-### Run (Development)
-
-```bash
-mvn spring-boot:run
-```
-
-API is at `http://localhost:8080`.  
-WebSocket is at `ws://localhost:8080/ws`.
-
-### Run (Production)
-
-```bash
-mvn clean package
-java -jar target/tickit-0.0.1-SNAPSHOT.jar
-```
+Then set `rag.enabled=true` in `src/main/resources/application.properties`. With RAG disabled the assistant falls back to a database lookup.
 
 ### Test
 
 ```bash
-mvn test
+./mvnw test
 ```
-
----
 
 ## Configuration
 
-| Variable                                    | Required | Default                                   | Description                                             |
-| ------------------------------------------- | -------- | ----------------------------------------- | ------------------------------------------------------- |
-| `TICKIT_SECURITY_JWT_SECRET`                | Yes      | —                                         | Secret key for signing JWTs; min 32 chars               |
-| `TICKIT_SECURITY_JWT_EXPIRATION_MS`         | Yes      | —                                         | JWT expiry time in milliseconds                         |
-| `SPRING_DATASOURCE_URL`                     | Yes      | `jdbc:postgresql://localhost:5432/tickit` | PostgreSQL connection string                            |
-| `SPRING_DATASOURCE_USERNAME`                | Yes      | `postgres`                                | Database user                                           |
-| `SPRING_DATASOURCE_PASSWORD`                | Yes      | —                                         | Database password                                       |
-| `TICKIT_AUTOMATION_OVERDUE_CASES_SCHEDULE`  | No       | `0 0 * * * *`                             | Cron for overdue case checks                            |
-| `TICKIT_AUTOMATION_RESOLUTION_SLA_SCHEDULE` | No       | `0 */6 * * * *`                           | Cron for resolution SLA monitoring                      |
-| `TICKIT_AUTOMATION_RESPONSE_SLA_SCHEDULE`   | No       | `0 */3 * * * *`                           | Cron for response SLA monitoring                        |
-| `CRYPTO_PRIVATE_KEY`                        | Yes      | —                                         | RSA 2048 private key (PEM format) for audit signing     |
-| `CRYPTO_PUBLIC_KEY`                         | Yes      | —                                         | RSA 2048 public key (PEM format) for audit verification |
+| Variable | Required | Description |
+| --- | --- | --- |
+| `SPRING_DATASOURCE_URL` | Yes | JDBC URL, e.g. `jdbc:postgresql://localhost:5432/tickit` |
+| `SPRING_DATASOURCE_USERNAME` | Yes | Database user |
+| `SPRING_DATASOURCE_PASSWORD` | Yes | Database password |
+| `TICKIT_SECURITY_JWT_SECRET` | Yes | HS512 signing secret, at least 32 characters |
+| `TICKIT_SECURITY_JWT_EXPIRATION_MS` | Yes | Token lifetime in milliseconds |
+| `CRYPTO_PRIVATE_KEY` / `CRYPTO_PUBLIC_KEY` | Yes | RSA 2048 PEM pair used to sign and verify ledger entries |
+| `TICKIT_AUTOMATION_*_SCHEDULE` | No | Cron expressions for overdue and SLA jobs |
+| `TICKIT_STORAGE_UPLOAD_DIR`, `TICKIT_STORAGE_MAX_FILE_SIZE` | No | Attachment storage |
+| `llm.endpoint`, `llm.model`, `rag.endpoint`, `rag.enabled` | No | Ollama and RAG service settings in `application.properties` |
 
----
+`.env.example` lists the full set. Never commit a real `.env`.
 
-## API Endpoints
+## Key endpoints
 
-### Authentication
+`POST /api/v1/auth/signin` and `/signup` — JWT login and account creation.
 
-`POST /api/v1/auth/login` — Returns JWT. Body: `{ email, password }`.
+`GET /api/v1/tickets` — paged, filterable ticket list; `GET /api/v1/tickets/stats/all` for dashboard counts.
 
-`POST /api/v1/auth/signup` — Create user account. Body: `{ email, password, nom, prenom, poste, equipeId }`.
+`PUT /api/v1/tickets/{id}/status` — validated status transition.
 
-### Tickets
+`POST /api/v1/ai/suggest/{ticketId}` — RAG-assisted resolution suggestion.
 
-`POST /api/v1/tickets` — Create ticket. Body: `{ subject, description, priorityLevel, caseId }`. Auth required.
+`GET /api/v1/ledger-entries/verification/blockchain` — verifies the whole audit chain.
 
-`GET /api/v1/tickets/:id` — Fetch ticket details. Auth required.
+`GET /api/v1/notifications/paged` — persisted notifications; live ones arrive over `/ws`.
 
-`PUT /api/v1/tickets/:id` — Update ticket status. Body: `{ statut }`. Auth required.
+## Measurements
 
-`GET /api/v1/tickets?page=0&size=10&sort=createdAt,desc` — List tickets with pagination. Auth required.
-
-### AI Analysis
-
-`POST /api/v1/ai/analyse` — Analyze system performance. Returns metrics + AI-generated insights. Auth required.
-
-`POST /api/v1/ai/suggest-resolution/:ticketId` — Suggest resolution strategy for a ticket using LLM + semantic search. Auth required.
-
-`POST /api/v1/ai/predict-blockage/:treatmentActId` — Predict SLA breach risk 72 hours ahead. Auth required.
-
----
+The numbers above come from files in this repository: [measurements/METRICS.md](measurements/METRICS.md), `ai-module/measure_rag.py`, `k6/websocket_load_test.js`.
 
 ## Roadmap
 
-| Status | Item                                                                                             |
-| ------ | ------------------------------------------------------------------------------------------------ |
-| ✅     | Granular ticket status sub-states (intake → validation → assignment → resolution)                |
-| ✅     | Real-time WebSocket notifications via STOMP                                                      |
-| ✅     | AI resolution suggestions (Ollama + ChromaDB semantic search)                                    |
-| ✅     | Immutable audit trail with HMAC signing                                                          |
-| ✅     | JWT-based role access control (RBAC)                                                             |
-| 🔲     | **Mobile app** (React Native) — offline draft support, field technician check-ins                |
-| 🔲     | **Advanced analytics dashboard** — funnel analysis, cycle time trends, team KPIs                 |
-| 🔲     | **SLA breach predictors** — ML model trained on 12 months of case history                        |
-| 🔲     | **Automated case routing** — ML classifier assigns new cases to teams based on skills + capacity |
-| 🔲     | **Slack/Teams integration** — forward blockage alerts to team channels                           |
-
----
+| Status | Item |
+| --- | --- |
+| Done | Case, treatment act and ticket workflow with RBAC |
+| Done | STOMP notifications, SLA schedulers |
+| Done | Signed hash-chained ledger |
+| Done | RAG fix suggestions with local LLM |
+| Planned | Replace the LLM-based risk rating with a model trained on case history |
+| Planned | CI pipeline; integration tests for the ledger and WebSocket paths |
 
 ## License
 
-Proprietary. All rights reserved © 2025 Sofrecom.
+**Source-available, not open source.** TickIT is published under the
+[PolyForm Strict License 1.0.0](LICENSE) so you can read the code, run it, and learn
+from it for personal, research, or evaluation use.
 
----
+You may **not** use it commercially, redistribute it, rebrand it, or publish modified
+versions without written permission. Copyright (c) 2025 Yassine Krichen. All rights
+not granted by the license are reserved.
 
-Built by Yassine Krichen · Sofrecom Tunisia · 2025
+For commercial licensing or collaboration: krichenyassine22@gmail.com
+
+Built by [Yassine Krichen](https://github.com/yassine-krichen)
